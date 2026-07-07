@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>バイク保険 見積もり・プラン選択</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .card-button {
+            transition: all 0.2s ease;
+        }
+        .card-button:hover {
+            transform: translateY(-2px);
+        }
+        .card-button.selected {
+            border-color: rgb(30, 90, 189);
+            background-color: rgb(219, 234, 254);
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-4xl mx-auto">
+            <!-- Header -->
+            <div class="mb-8">
+                <h1 class="text-3xl font-bold text-blue-700 mb-2">バイク保険</h1>
+                <p class="text-gray-600">見積もり・プラン選択</p>
+            </div>
+
+            <!-- Form -->
+            <form id="quoteForm" class="space-y-8">
+                <!-- Section 1: Date of Birth -->
+                <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+                    <label class="flex items-center mb-4">
+                        <svg class="w-5 h-5 text-blue-700 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M6 2a1 1 0 00-1 1v2H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v2H7V3a1 1 0 00-1-1zm0 5h12v10H4V7z"></path>
+                        </svg>
+                        <span class="text-lg font-semibold text-gray-900">生年月日</span>
+                    </label>
+                    <div class="grid grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">年</label>
+                            <select class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-700 focus:border-transparent">
+                                <option>選択してください</option>
+                                <option>1980</option>
+                                <option>1985</option>
+                                <option>1990</option>
+                                <option>1995</option>
+                                <option>2000</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">月</label>
+                            <select class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-700 focus:border-transparent">
+                                <option>選択してください</option>
+                                <option>1月</option>
+                                <option>2月</option>
+                                <option>3月</option>
+                                <option>4月</option>
+                                <option>5月</option>
+                                <option>6月</option>
+                                <option>7月</option>
+                                <option>8月</option>
+                                <option>9月</option>
+                                <option>10月</option>
+                                <option>11月</option>
+                                <option>12月</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">日</label>
+                            <select class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-700 focus:border-transparent">
+                                <option>選択してください</option>
+                                <option>1</option>
+                                <option>2</option>
+                                <option>3</option>
+                                <option>4</option>
+                                <option>5</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 2: Auto Insurance Status -->
+                <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+                    <label class="flex items-center mb-4">
+                        <svg class="w-5 h-5 text-blue-700 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 2a1 1 0 00-.894.553L7.382 7H4a2 2 0 00-2 2v6a2 2 0 002 2h12a2 2 0 002-2V9a2 2 0 00-2-2h-3.382l-1.724-4.447A1 1 0 0010 2zM6 15a3 3 0 11-6 0 3 3 0 016 0zm-1-6a1 1 0 11-2 0 1 1 0 012 0z" clip-rule="evenodd"></path>
+                        </svg>
+                        <span class="text-lg font-semibold text-gray-900">バイク保険加入の有無</span>
+                    </label>
+                    <div class="grid grid-cols-2 gap-4">
+                        <button type="button" class="card-button border-2 border-gray-300 rounded-lg p-4 text-center hover:border-blue-700" onclick="selectOption(this, 'auto-insurance')">
+                            <div class="text-lg font-semibold text-gray-900">加入している</div>
+                        </button>
+                        <button type="button" class="card-button border-2 border-gray-300 rounded-lg p-4 text-center hover:border-blue-700" onclick="selectOption(this, 'auto-insurance')">
+                            <div class="text-lg font-semibold text-gray-900">加入していない</div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Section 3: Driver's License Color -->
+                <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+                    <label class="flex items-center mb-4">
+                        <svg class="w-5 h-5 text-blue-700 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z"></path>
+                        </svg>
+                        <span class="text-lg font-semibold text-gray-900">免許証の色</span>
+                    </label>
+                    <div class="grid grid-cols-3 gap-4">
+                        <button type="button" class="card-button border-2 border-gray-300 rounded-lg p-4 text-center hover:border-blue-700" onclick="selectOption(this, 'license-color')">
+                            <div class="w-6 h-6 bg-yellow-500 rounded mx-auto mb-2"></div>
+                            <div class="text-lg font-semibold text-gray-900">ゴールド</div>
+                        </button>
+                        <button type="button" class="card-button border-2 border-gray-300 rounded-lg p-4 text-center hover:border-blue-700" onclick="selectOption(this, 'license-color')">
+                            <div class="w-6 h-6 bg-blue-600 rounded mx-auto mb-2"></div>
+                            <div class="text-lg font-semibold text-gray-900">ブルー</div>
+                        </button>
+                        <button type="button" class="card-button border-2 border-gray-300 rounded-lg p-4 text-center hover:border-blue-700" onclick="selectOption(this, 'license-color')">
+                            <div class="w-6 h-6 bg-green-500 rounded mx-auto mb-2"></div>
+                            <div class="text-lg font-semibold text-gray-900">グリーン</div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Section 4: Primary Use -->
+                <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+                    <label class="flex items-center mb-4">
+                        <svg class="w-5 h-5 text-blue-700 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"></path>
+                        </svg>
+                        <span class="text-lg font-semibold text-gray-900">主な使用目的</span>
+                    </label>
+                    <div class="grid grid-cols-3 gap-4">
+                        <button type="button" class="card-button border-2 border-gray-300 rounded-lg p-4 text-center hover:border-blue-700" onclick="selectOption(this, 'primary-use')">
+                            <div class="text-lg font-semibold text-gray-900">日常・レジャー</div>
+                        </button>
+                        <button type="button" class="card-button border-2 border-gray-300 rounded-lg p-4 text-center hover:border-blue-700" onclick="selectOption(this, 'primary-use')">
+                            <div class="text-lg font-semibold text-gray-900">通勤・通学</div>
+                        </button>
+                        <button type="button" class="card-button border-2 border-gray-300 rounded-lg p-4 text-center hover:border-blue-700" onclick="selectOption(this, 'primary-use')">
+                            <div class="text-lg font-semibold text-gray-900">業務使用</div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Section 5: Coverage Range -->
+                <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+                    <label class="flex items-center mb-4">
+                        <svg class="w-5 h-5 text-blue-700 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path>
+                        </svg>
+                        <span class="text-lg font-semibold text-gray-900">バイクを運転する方（補償範囲）</span>
+                    </label>
+                    <div class="space-y-3">
+                        <button type="button" class="card-button w-full border-2 border-gray-300 rounded-lg p-4 text-left hover:border-blue-700" onclick="selectOption(this, 'coverage-range')">
+                            <div class="flex items-start">
+                                <span class="font-semibold text-blue-700 mr-3">①</span>
+                                <div>
+                                    <div class="text-lg font-semibold text-gray-900">運転される方</div>
+                                    <p class="text-sm text-gray-600">ご自身のみ</p>
+                                </div>
+                            </div>
+                        </button>
+                        <button type="button" class="card-button w-full border-2 border-gray-300 rounded-lg p-4 text-left hover:border-blue-700" onclick="selectOption(this, 'coverage-range')">
+                            <div class="flex items-start">
+                                <span class="font-semibold text-blue-700 mr-3">②</span>
+                                <div>
+                                    <div class="text-lg font-semibold text-gray-900">①に加えて配偶者・別居の未婚の子ども</div>
+                                    <p class="text-sm text-gray-600">ご家族まで対象</p>
+                                </div>
+                            </div>
+                        </button>
+                        <button type="button" class="card-button w-full border-2 border-gray-300 rounded-lg p-4 text-left hover:border-blue-700" onclick="selectOption(this, 'coverage-range')">
+                            <div class="flex items-start">
+                                <span class="font-semibold text-blue-700 mr-3">③</span>
+                                <div>
+                                    <div class="text-lg font-semibold text-gray-900">②に加えて同居の子以外の親戚、使用人</div>
+                                    <p class="text-sm text-gray-600">最も広い補償範囲</p>
+                                </div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Section 6: Coverage Start Date -->
+                <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+                    <label class="flex items-center mb-4">
+                        <svg class="w-5 h-5 text-blue-700 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M6 2a1 1 0 00-1 1v2H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v2H7V3a1 1 0 00-1-1zm0 5h12v10H4V7z"></path>
+                        </svg>
+                        <span class="text-lg font-semibold text-gray-900">補償開始希望日</span>
+                    </label>
+                    <div class="grid grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">年</label>
+                            <select class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-700 focus:border-transparent">
+                                <option>2026</option>
+                                <option>2027</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">月</label>
+                            <select class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-700 focus:border-transparent">
+                                <option>1月</option>
+                                <option>2月</option>
+                                <option>3月</option>
+                                <option>4月</option>
+                                <option>5月</option>
+                                <option>6月</option>
+                                <option>7月</option>
+                                <option>8月</option>
+                                <option>9月</option>
+                                <option>10月</option>
+                                <option>11月</option>
+                                <option>12月</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">日</label>
+                            <select class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-700 focus:border-transparent">
+                                <option>1</option>
+                                <option>2</option>
+                                <option>3</option>
+                                <option>4</option>
+                                <option>5</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 7: Other Bikes -->
+                <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+                    <label class="flex items-center mb-4">
+                        <svg class="w-5 h-5 text-blue-700 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v2h8v-2zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-2a4 4 0 00-4-4H4a4 4 0 00-4 4v2h16z"></path>
+                        </svg>
+                        <span class="text-lg font-semibold text-gray-900">他のバイクを持っているか</span>
+                    </label>
+                    <div class="grid grid-cols-2 gap-4">
+                        <button type="button" class="card-button border-2 border-gray-300 rounded-lg p-4 text-center hover:border-blue-700" onclick="selectOption(this, 'other-bikes')">
+                            <div class="text-lg font-semibold text-gray-900">持っている</div>
+                        </button>
+                        <button type="button" class="card-button border-2 border-gray-300 rounded-lg p-4 text-center hover:border-blue-700" onclick="selectOption(this, 'other-bikes')">
+                            <div class="text-lg font-semibold text-gray-900">持っていない</div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Section 8: Bike Type -->
+                <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+                    <label class="flex items-center mb-4">
+                        <svg class="w-5 h-5 text-blue-700 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M7 2a1 1 0 00-.707.293l-7 7a1 1 0 000 1.414l7 7a1 1 0 001.414-1.414L1.414 10l6.293-6.293A1 1 0 007 2zm6 0a1 1 0 01.707.293l7 7a1 1 0 010 1.414l-7 7a1 1 0 11-1.414-1.414L18.586 10l-6.293-6.293A1 1 0 0113 2z"></path>
+                        </svg>
+                        <span class="text-lg font-semibold text-gray-900">バイクのタイプ</span>
+                    </label>
+                    <div class="grid grid-cols-3 gap-4">
+                        <button type="button" class="card-button border-2 border-gray-300 rounded-lg p-4 text-center hover:border-blue-700" onclick="selectOption(this, 'bike-type')">
+                            <div class="text-lg font-semibold text-gray-900">原動機付自転車</div>
+                            <p class="text-xs text-gray-600">50〜125cc</p>
+                        </button>
+                        <button type="button" class="card-button border-2 border-gray-300 rounded-lg p-4 text-center hover:border-blue-700" onclick="selectOption(this, 'bike-type')">
+                            <div class="text-lg font-semibold text-gray-900">軽二輪</div>
+                            <p class="text-xs text-gray-600">125〜250cc</p>
+                        </button>
+                        <button type="button" class="card-button border-2 border-gray-300 rounded-lg p-4 text-center hover:border-blue-700" onclick="selectOption(this, 'bike-type')">
+                            <div class="text-lg font-semibold text-gray-900">小型二輪</div>
+                            <p class="text-xs text-gray-600">250cc〜</p>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Section 9: Bike Manufacturer -->
+                <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+                    <label class="flex items-center mb-4">
+                        <svg class="w-5 h-5 text-blue-700 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path>
+                        </svg>
+                        <span class="text-lg font-semibold text-gray-900">バイクのメーカー名</span>
+                    </label>
+                    <select class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-700 focus:border-transparent">
+                        <option>選択してください</option>
+                        <option>ホンダ</option>
+                        <option>ヤマハ</option>
+                        <option>スズキ</option>
+                        <option>カワサキ</option>
+                    </select>
+                </div>
+
+                <!-- Section 10: Model -->
+                <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+                    <label class="block text-lg font-semibold text-gray-900 mb-4">車名</label>
+                    <select class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-700 focus:border-transparent">
+                        <option>選択してください</option>
+                        <option>ZZ</option>
+                        <option>XX</option>
+                    </select>
+                </div>
+
+                <!-- Section 11: Registration Type -->
+                <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+                    <label class="block text-lg font-semibold text-gray-900 mb-4">型式</label>
+                    <select class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-700 focus:border-transparent">
+                        <option>選択してください</option>
+                        <option>AB1</option>
+                        <option>ZX2</option>
+                    </select>
+                </div>
+
+                <!-- Section 12: First Registration Month -->
+                <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+                    <label class="block text-lg font-semibold text-gray-900 mb-4">初年度登録月</label>
+                    <select class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-700 focus:border-transparent">
+                        <option>選択してください</option>
+                        <option>2026年6月</option>
+                        <option>2026年7月</option>
+                        <option>2026年8月</option>
+                    </select>
+                </div>
+
+                <!-- Section 13: Primary Usage Location -->
+                <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+                    <label class="flex items-center mb-4">
+                        <svg class="w-5 h-5 text-blue-700 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path>
+                        </svg>
+                        <span class="text-lg font-semibold text-gray-900">主な使用地</span>
+                    </label>
+                    <select class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-700 focus:border-transparent">
+                        <option>選択してください</option>
+                        <option>北海道</option>
+                        <option>東京都</option>
+                        <option>大阪府</option>
+                        <option>福岡県</option>
+                    </select>
+                </div>
+
+                <!-- Submit Button -->
+                <div class="flex justify-center pb-8">
+                    <button type="submit" class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 px-12 rounded-lg text-lg transition duration-200 transform hover:scale-105">
+                        見積もり結果を確認する
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function selectOption(button, groupName) {
+            // Find all buttons in the same group
+            const parent = button.closest('div');
+            const buttons = parent.querySelectorAll(`button[onclick*="${groupName}"]`);
+            
+            // Remove selected class from all buttons
+            buttons.forEach(btn => btn.classList.remove('selected'));
+            
+            // Add selected class to clicked button
+            button.classList.add('selected');
+        }
+
+        document.getElementById('quoteForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            alert('見積もり結果を確認しています...');
+        });
+    </script>
+</body>
+</html>
