@@ -17,6 +17,40 @@
             background-color: rgb(219, 234, 254);
         }
     </style>
+    <script>
+        // ページロード時にパスワード認証を実行
+        (function() {
+            const authenticated = sessionStorage.getItem('authenticated');
+            
+            // 既に認証済みならスキップ
+            if (authenticated === 'true') {
+                return;
+            }
+            
+            // パスワードを要求
+            const password = prompt('このページを表示するにはパスワードが必要です。\n\nパスワードを入力してください：');
+            
+            // キャンセルまたはパスワードが間違っている場合
+            if (!password || password !== 'insurance2026') {
+                document.body.innerHTML = `
+                    <div style="display: flex; align-items: center; justify-content: center; min-height: 100vh; background-color: #f3f4f6;">
+                        <div style="text-align: center; padding: 40px; background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
+                            <h1 style="color: #1e5abd; font-size: 24px; margin-bottom: 16px;">🔒 アクセス制限</h1>
+                            <p style="color: #666; font-size: 16px; margin-bottom: 24px;">申し訳ありませんが、このページへのアクセスは制限されています。</p>
+                            <p style="color: #999; font-size: 14px;">正しいパスワードを入力してください。</p>
+                            <button onclick="location.reload()" style="margin-top: 24px; padding: 12px 24px; background-color: #1e5abd; color: white; border: none; border-radius: 6px; font-size: 16px; cursor: pointer; transition: background-color 0.2s;">
+                                もう一度試す
+                            </button>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+            
+            // 認証成功 → セッションに保存
+            sessionStorage.setItem('authenticated', 'true');
+        })();
+    </script>
 </head>
 <body class="bg-gray-50">
     <div class="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
