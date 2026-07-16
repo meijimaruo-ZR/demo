@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>バイク保険 新規複数台登録</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .card-button {
+            transition: all 0.2s ease;
+        }
+        .card-button:hover {
+            transform: translateY(-2px);
+        }
+        .card-button.selected {
+            border-color: rgb(30, 90, 189);
+            background-color: rgb(219, 234, 254);
+        }
+        
+        .step-section {
+            opacity: 0;
+            max-height: 0;
+            overflow: hidden;
+            transition: opacity 0.4s ease, max-height 0.4s ease;
+            pointer-events: none;
+        }
+        
+        .step-section.visible {
+            opacity: 1;
+            max-height: 2000px;
+            pointer-events: auto;
+        }
+        
+        .bike-card {
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .loading-bar {
+            animation: progress 3s ease-in-out;
+        }
+        
+        @keyframes progress {
+            0% { width: 0%; }
+            50% { width: 70%; }
+            100% { width: 100%; }
+        }
+        
+        .ocr-input {
+            background-color: rgb(240, 253, 250);
+            border: 2px solid rgb(45, 212, 191);
+        }
+        
+        .bike-card.bg-red {
+            background-color: rgb(254, 242, 242);
+        }
+        
+        .bike-card.bg-blue {
+            background-color: rgb(240, 249, 255);
+        }
+        
+        .bike-card.bg-black {
+            background-color: rgb(249, 250, 251);
+        }
+        
+        .next-button {
+            opacity: 0;
+            max-height: 0;
+            overflow: hidden;
+            transition: opacity 0.3s ease, max-height 0.3s ease;
+            margin-top: 0.5rem;
+        }
+        
+        .next-button.visible {
+            opacity: 1;
+            max-height: 60px;
+        }
+    </style>
+    <script>
+        // ページ全体を非表示にする
+        document.documentElement.style.display = 'none';
+        
+        // 認証チェック関数
+        function checkAuthentication() {
+            const authenticated = sessionStorage.getItem('authenticated');
+            
+            // 既に認証済みならページを表示
+            if (authenticated === 'true') {
+                document.documentElement.style.display = '';
+                return;
+            }
+            
+            // パスワード入力ループ
+            let isValid = false;
+            let attempts = 0;
+            const maxAttempts = 3;
+            
+            while (!isValid && attempts < maxAttempts) {
+                const password = prompt(
+                    attempts === 0 
+                        ? 'このページを表示するにはパスワードが必要です。\n\nパスワードを入力してください：'
+                        : `パスワードが間違っています。\n\nもう一度入力してください（残り${maxAttempts - attempts}回）：`
+                );
+                
+                // キャンセルボタンの場合
+                if (password === null) {
+                    showAccessDenied('キャンセルしました');
+                    return;
+                }
+                
+                // 空の場合
+                if (password === '') {
+                    attempts++;
+                    continue;
+                }
+                
+                // パスワード確認
+                if (password === 'insurance2026') {
+                    isValid = true;
+                    sessionStorage.setItem('authenticated', 'true');
+                    document.documentElement.style.display = '';
+                } else {
+                    attempts++;
+                }
+            }
+            
+            // 試行回数超過
+            if (!isValid) {
+                showAccessDenied('試行回数が超過しました');
+            }
+        }
+        
+        // アクセス拒否画面を表示
+        function showAccessDenied(reason) {
+            document.documentElement.style.display = '';
+            document.body.innerHTML = `
+                <div style="display: flex; align-items: center; justify-content: center; min-height: 100vh; background-color: #f3f4f6;">
+                    <div style="text-align: center; padding: 40px; background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
+                        <h1 style="color: #dc2626; font-size: 24px; margin-bottom: 16px;">🔒 アクセス拒否</h1>
+                        <p style="color: #666; font-size: 16px; margin-bottom: 24px;">申し訳ありませんが、このページへのアクセスは制限されています。</p>
+                        <p style="color: #999; font-size: 14px;">理由: ${reason}</p>
+                        <button onclick="location.reload()" style="margin-top: 24px; padding: 12px 24px; background-color: #1e5abd; color: white; border: none; border-radius: 6px; font-size: 16px; cursor: pointer; transition: background-color 0.2s;">
+                            もう一度試す
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // DOMContentLoaded 後に認証チェック実行
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', checkAuthentication);
+        } else {
+            checkAuthentication();
+        }
+    </script>
+</head>
+<body class="bg-gray-50">
+    <div class="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-4xl mx-auto">
+            <div class="mb-8">
+                <h1 class="text-3xl font-bold text-blue-700 mb-2">バイク保険</h1>
+                <p class="text-gray-600">新規複数台登録（お尻1つタイプ）</p>
+            </div>
+
+            <div id="messageArea" class="mb-6"></div>
+
+            <form id="quoteForm" class="space-y-8">
+                <div id="step1" class="step-section visible bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+                    <label class="flex items-center mb-4">
+                        <svg class="w-5 h-5 text-blue-700 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 2a1 1 0 00-.894.553L7.382 7H4a2 2 0 00-2 2v6a2 2 0 002 2h12a2 2 0 002-2V9a2 2 0 00-2-2h-3.382l-1.724-4.447A1 1 0 0010 2zM6 15a3 3 0 11-6 0 3 3 0 016 0zm-1-6a1 1 0 11-2 0 1 1 0 012 0z" clip-rule="evenodd"></path>
+                        </svg>
+                        <span class="text-lg font-semibold text-gray-900">【保険加入状況】</span>
+                    </label>
+                    <div class="grid grid-cols-1 gap-4">
+                        <button type="button" class="card-button border-2 border-gray-300 rounded-lg p-4 text-center hover:border-blue-700" onclick="handleInsuranceStatus('other-switching', this)">
+                            <div class="text-lg font-semibold text-gray-900">他社で加入中</div>
+                        </button>
+                        <button type="button" class="card-button border-2 border-gray-300 rounded-lg p-4 text-center hover:border-blue-700" onclick="handleInsuranceStatus('additional', this)">
+                            <div class="text-lg font-semibold text-gray-900">追加加入する</div>
+                        </button>
+                        <button type="button" class="card-button border-2 border-gray-300 rounded-lg p-4 text-center hover:border-blue-700" onclick="handleInsuranceStatus('first-time', this)">
+                            <div class="text-lg font-semibold text-gray-900">はじめて加入する</div>
+                        </button>
+                    </div>
+                    <div id="nextBtn-step1" class="next-button">
+                        <button type="button" class="w-full mt-4 px-6 py-2 bg-blue-700 hover:bg-blue-800 text-white font-semibold rounded-lg transition-colors" onclick="progressToStep('step2')">
+                            【次へ】
+                        </button>
+                    </div>
+                </div>
+
+                <div id="step2" class="step-section bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+                    <label class="flex items-center mb-4">
+                        <svg class="w-5 h-5 text-blue-700 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M6 2a1 1 0 00-1 1v2H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v2H7V3a1 1 0 00-1-1zm0 5h12v10H4V7z"></path>
+                        </svg>
+                        <span class="text-lg font-semibold text-gray-900">【保険開始日入力】</span>
+                    </label>
+                    <div class="grid grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">年</label>
+                            <select id="startYear" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-700 focus:border-transparent" onchange="checkStep2Complete()">
+                                <option>選択してください</option>
+                                <option>2026</option>
+                                <option>2027</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">月</label>
+                            <select id="startMonth" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-700 focus:border-transparent" onchange="checkStep2Complete()">
+                                <option>選択してください</option>
+                                <option>1月</option>
+                                <option>2月</option>
+                                <option>3月</option>
+                                <option>4月</option>
+                                <option>5月</option>
+                                <option>6月</option>
+                                <option>7月</option>
+                                <option>8月</option>
+                                <option>9月</option>
+                                <option>10月</option>
+                                <option>11月</option>
+                                <option>12月</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">日</label>
+                            <select id="startDay" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-700 focus:border-transparent" onchange="checkStep2Complete()">
+                                <option>選択してください</option>
+                                <option>1</option>
+                                <option>2</option>
+                                <option>3</option>
+                                <option>4</option>
+                                <option>5</option>
+                                <option>10</option>
+                                <option>15</option>
+                                <option>20</option>
+                                <option>25</option>
+                                <option>30</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="nextBtn-step2" class="next-button">
+                        <button type="button" class="w-full mt-4 px-6 py-2 bg-blue-700 hover:bg-blue-800 text-white font-semibold rounded-lg transition-colors" onclick="progressToStep('step3')">
+                            【次へ】
+                        </button>
+                    </div>
+                </div>
+
+                <div id="step3" class="step-section bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+                    <label class="flex items-center mb-4">
+                        <svg class="w-5 h-5 text-blue-700 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path>
+                        </svg>
+                        <span class="text-lg font-semibold text-gray-900">【バイクの所有者】</span>
+                    </label>
+                    <div class="grid grid-cols-3 gap-4">
+                        <button type="button" class="card-button border-2 border-gray-300 rounded-lg p-4 text-center hover:border-blue-700" onclick="selectOption(this, 'bike-owner')">
+                            <div class="text-lg font-semibold text-gray-900">ご本人</div>
+                        </button>
+                        <button type="button" class="card-button border-2 border-gray-300 rounded-lg p-4 text-center hover:border-blue-700" onclick="selectOption(this, 'bike-owner')">
+                            <div class="text-lg font-semibold text-gray-900">配偶者</div>
+                        </button>
+                        <button type="button" class="card-button border-2 border-gray-300 rounded-lg p-4 text-center hover:border-blue-700" onclick="selectOption(this, 'bike-owner')">
+                            <div class="text-lg font-semibold text-gray-900">その他</div>
+                        </button>
+                    </div>
+                    <div id="nextBtn-step3" class="next-button">
+                        <button type="button" class="w-full mt-4 px-6 py-2 bg-blue-700 hover:bg-blue-800 text-white font-semibold rounded-lg transition-colors" onclick="progressToStep('step3-2')">
+                            【次へ】
+                        </button>
+                    </div>
+                </div>
+
+                <!-- NEW STEP 3-2: Birth Date -->
+                <div id="step3-2" class="step-section bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+                    <label class="flex items-center mb-4">
+                        <svg class="w-5 h-5 text-blue-700 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M6 2a1 1 0 00-1 1v2H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v2H7V3a1 1 0 00-1-1zm0 5h12v10H4V7z"></path>
+                        </svg>
+                        <span class="text-lg font-semibold text-gray-900">【生年月日】</span>
+                    </label>
+                    <div class="grid grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">年</label>
+                            <select id="birthYear" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-700 focus:border-transparent" onchange="checkStep3_2Complete()">
+                                <option>選択してください</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">月</label>
+                            <select id="birthMonth" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-700 focus:border-transparent" onchange="checkStep3_2Complete()">
+                                <option>選択してください</option>
+                                <option>1月</option>
+                                <option>2月</option>
+                                <option>3月</option>
+                                <option>4月</option>
+                                <option>5月</option>
+                                <option>6月</option>
+                                <option>7月</option>
+                                <option>8月</option>
+                                <option>9月</option>
+                                <option>10月</option>
+                                <option>11月</option>
+                                <option>12月</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">日</label>
+                            <select id="birthDay" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-700 focus:border-transparent" onchange="checkStep3_2Complete()">
+                                <option>選択してください</option>
+                                <option>1</option>
+                                <option>2</option>
+                                <option>3</option>
+                                <option>4</option>
+                                <option>5</option>
+                                <option>10</option>
+                                <option>15</option>
+                                <option>20</option>
+                                <option>25</option>
+                                <option>30</option>
+                                <option>31</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="nextBtn-step3-2" class="next-button">
+                        <button type="button" class="w-full mt-4 px-6 py-2 bg-blue-700 hover:bg-blue-800 text-white font-semibold rounded-lg transition-colors" onclick="progressToStep('step3-3')">
+                            【次へ】
+                        </button>
+                    </div>
+                </div>
+
+                <!-- NEW STEP 3-3: Driver's License Color -->
+                <div id="step3-3" class="step-section bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+                    <label class="flex items-center mb-4">
+                        <svg class="w-5 h-5 text-blue-700 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z"></path>
+                        </svg>
+                        <span class="text-lg font-semibold text-gray-900">【運転免許証の色】</span>
+                    </label>
+                    <div class="grid grid-cols-3 gap-4">
+                        <button type="button" class="card-button border-2 border-gray-300 rounded-lg p-4 text-center hover:border-blue-700" onclick="selectLicenseColor('gold', this)">
+                            <div class="text-3xl mb-2">🟡</div>
+                            <div class="text-lg font-semibold text-gray-900">ゴールド</div>
+                        </button>
+                        <button type="button" class="card-button border-2 border-gray-300 rounded-lg p-4 text-center hover:border-blue-700" onclick="selectLicenseColor('blue', this)">
+                            <div class="text-3xl mb-2">🔵</div>
+                            <div class="text-lg font-semibold text-gray-900">ブルー</div>
+                        </button>
+                        <button type="button" class="card-button border-2 border-gray-300 rounded-lg p-4 text-center hover:border-blue-700" onclick="selectLicenseColor('green', this)">
+                            <div class="text-3xl mb-2">💚</div>
+                            <div class="text-lg font-semibold text-gray-900">グリーン</div>
+                        </button>
+                    </div>
+                    <div id="nextBtn-step3-3" class="next-button">
+                        <button type="button" class="w-full mt-4 px-6 py-2 bg-blue-700 hover:bg-blue-800 text-white font-semibold rounded-lg transition-colors" onclick="progressToStep('step3-4')">
+                            【次へ】
+                        </button>
+                    </div>
+                </div>
+
+                <!-- NEW STEP 3-4: Annual Mileage -->
+                <div id="step3-4" class="step-section bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+                    <label class="flex items-center mb-4">
+                        <svg class="w-5 h-5 text-blue-700 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9.293 2.293a1 1 0 011.414 0l6 6a1 1 0 01-1.414 1.414L11 5.414V15a1 1 0 11-2 0V5.414L4.707 9.707a1 1 0 01-1.414-1.414l6-6z"></path>
+                        </svg>
+                        <span class="text-lg font-semibold text-gray-900">【年間走行距離】</span>
+                    </label>
+                    <select id="annualMileage" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-700 focus:border-transparent" onchange="checkStep3_4Complete()">
+                        <option>選択してください</option>
+                        <option>1,000km未満</option>
+                        <option>1,000km以上 2,000km未満</option>
+                        <option>2,000km以上 3,000km未満</option>
+                        <option>3,000km以上 4,000km未満</option>
+                        <option>4,000km以上 5,000km未満</option>
+                        <option>5,000km以上 6,000km未満</option>
+                        <option>6,000km以上 7,000km未満</option>
+                        <option>7,000km以上 8,000km未満</option>
+                        <option>8,000km以上 9,000km未満</option>
+                        <option>9,000km以上 10,000km未満</option>
+                        <option>10,000km以上</option>
+                    </select>
+                    <div id="nextBtn-step3-4" class="next-button">
+                        <button type="button" class="w-full mt-4 px-6 py-2 bg-blue-700 hover:bg-blue-800 text-white font-semibold rounded-lg transition-colors" onclick="progressToStep('step4')">
+                            【次へ】
+                        </button>
+                    </div>
+                </div>
+
+                <div id="step4" class="step-section bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+                    <label class="flex items-center mb-4">
+                        <svg class="w-5 h-5 text-blue-700 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"></path>
+                        </svg>
+                        <span class="text-lg font-semibold text-gray-900">【バイクの使用目的】</span>
+                    </label>
+                    <div class="grid grid-cols-3 gap-4">
+                        <button type="button" class="card-button border-2 border-gray-300 rounded-lg p-4 text-center hover:border-blue-700" onclick="selectOption(this, 'bike-use')">
+                            <div class="text-lg font-semibold text-gray-900">日常・レジャー</div>
+                        </button>
+                        <button type="button" class="card-button border-2 border-gray-300 rounded-lg p-4 text-center hover:border-blue-700" onclick="selectOption(this, 'bike-use')">
+                            <div class="text-lg font-semibold text-gray-900">通勤・通学</div>
+                        </button>
+                        <button type="button" class="card-button border-2 border-gray-300 rounded-lg p-4 text-center hover:border-blue-700" onclick="selectOption(this, 'bike-use')">
+                            <div class="text-lg font-semibold text-gray-900">業務使用</div>
+                        </button>
+                    </div>
+                    <div id="nextBtn-step4" class="next-button">
+                        <button type="button" class="w-full mt-4 px-6 py-2 bg-blue-700 hover:bg-blue-800 text-white font-semibold rounded-lg transition-colors" onclick="progressToStep('step5')">
+                            【次へ】
+                        </button>
+                    </div>
+                </div>
+
+                <div id="step5" class="step-section bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+                    <label class="flex items-center mb-4">
+                        <svg class="w-5 h-5 text-blue-700 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9V5H5.05z" clip-rule="evenodd"></path>
+                        </svg>
+                        <span class="text-lg font-semibold text-gray-900">【バイクの主な使用地（都道府県）】</span>
+                    </label>
+                    <select id="prefecture" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-700 focus:border-transparent" onchange="checkStep5Complete()">
+                        <option>選択してください</option>
+                        <option>北海道</option>
+                        <option>青森県</option>
+                        <option>岩手県</option>
+                        <option>宮城県</option>
+                        <option>秋田県</option>
+                        <option>山形県</option>
+                        <option>福島県</option>
+                        <option>茨城県</option>
+                        <option>栃木県</option>
+                        <option>群馬県</option>
+                        <option>埼玉県</option>
+                        <option>千葉県</option>
+                        <option>東京都</option>
+                        <option>神奈川県</option>
+                        <option>新潟県</option>
+                        <option>富山県</option>
+                        <option>石川県</option>
+                        <option>福井県</option>
+                        <option>山梨県</option>
+                        <option>長野県</option>
+                        <option>岐阜県</option>
+                        <option>静岡県</option>
+                        <option>愛知県</option>
+                        <option>三重県</option>
+                        <option>滋賀県</option>
+                        <option>京都府</option>
+                        <option>大阪府</option>
+                        <option>兵庫県</option>
+                        <option>奈良県</option>
+                        <option>和歌山県</option>
+                        <option>鳥取県</option>
+                        <option>島根県</option>
+                        <option>岡山県</option>
+                        <option>広島県</option>
+                        <option>山口県</option>
+                        <option>徳島県</option>
+                        <option>香川県</option>
+                        <option>愛媛県</option>
+                        <option>高知県</option>
+                        <option>福岡県</option>
+                        <option>佐賀県</option>
+                        <option>長崎県</option>
+                        <option>熊本県</option>
+                        <option>大分県</option>
+                        <option>宮崎県</option>
+                        <option>鹿児島県</option>
+                        <option>沖縄県</option>
+                    </select>
+                    <div id="nextBtn-step5" class="next-button">
+                        <button type="button" class="w-full mt-4 px-6 py-2 bg-blue-700 hover:bg-blue-800 text-white font-semibold rounded-lg transition-colors" onclick="progressToStep('step6')">
+                            【次へ】
+                        </button>
+                    </div>
+                </div>
+
+                <div id="step6" class="step-section bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+                    <label class="flex items-center mb-4">
+                        <svg class="w-5 h-5 text-blue-700 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path>
+                        </svg>
+                        <span class="text-lg font-semibold text-gray-900">【バイク所有台数】</span>
+                    </label>
+                    <select id="bikeCount" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-700 focus:border-transparent" onchange="generateBikeCards()">
+                        <option>選択してください</option>
+                        <option value="1">1台</option>
+                        <option value="2">2台</option>
+                        <option value="3">3台</option>
+                        <option value="4">4台</option>
+                    </select>
+                </div>
+
+                <div id="bikeCardsContainer"></div>
+
+                <div id="submitContainer" class="bg-white rounded-lg p-6 shadow-sm border border-gray-200 hidden">
+                    <button type="button" id="submitBtn" class="w-full px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-lg transition-colors" onclick="submitForm()">
+                        見積もり結果を確認する
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let formState = {
+            insuranceStatus: null,
+            startDate: {},
+            bikeOwner: null,
+            birthDate: {},
+            licenseColor: null,
+            annualMileage: null,
+            bikeUse: null,
+            prefecture: null,
+            bikeCount: null,
+            bikes: {}
+        };
+
+        // Initialize birth year dropdown
+        function initializeBirthYear() {
+            const select = document.getElementById('birthYear');
+            const currentYear = new Date().getFullYear();
+            for (let year = currentYear - 85; year <= currentYear - 15; year++) {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year;
+                select.appendChild(option);
+            }
+        }
+
+        // Initialize when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeBirthYear();
+        });
+
+        function showMessage(message, type = 'info') {
+            const messageArea = document.getElementById('messageArea');
+            if (message === '') {
+                messageArea.innerHTML = '';
+                return;
+            }
+            const bgColor = type === 'info' ? 'bg-blue-100' : 'bg-green-100';
+            const textColor = type === 'info' ? 'text-blue-800' : 'text-green-800';
+            messageArea.innerHTML = `<div class="p-4 rounded-lg ${bgColor} ${textColor} text-center">${message}</div>`;
+        }
+
+        function handleInsuranceStatus(status, btn) {
+            formState.insuranceStatus = status;
+            
+            const parent = btn.parentElement;
+            const siblings = parent.querySelectorAll('.card-button');
+            siblings.forEach(sibling => sibling.classList.remove('selected'));
+            btn.classList.add('selected');
+            
+            // Show next button
+            document.getElementById('nextBtn-step1').classList.add('visible');
+            
+            if (status === 'other-switching') {
+                showMessage('他社乗り換えフローへ遷移します（モック表示）');
+            } else if (status === 'additional') {
+                showMessage('マイページへ遷移します（モック表示）');
+            } else if (status === 'first-time') {
+                showMessage('');
+            }
+        }
+
+        function selectOption(btn, category) {
+            const parent = btn.parentElement;
+            const siblings = parent.querySelectorAll('.card-button');
+            siblings.forEach(sibling => sibling.classList.remove('selected'));
+            btn.classList.add('selected');
+
+            if (category === 'bike-owner') {
+                formState.bikeOwner = btn.textContent.trim();
+                document.getElementById('nextBtn-step3').classList.add('visible');
+            } else if (category === 'bike-use') {
+                formState.bikeUse = btn.textContent.trim();
+                document.getElementById('nextBtn-step4').classList.add('visible');
+            }
+        }
+
+        function selectLicenseColor(color, btn) {
+            formState.licenseColor = color;
+            const parent = btn.parentElement;
+            const siblings = parent.querySelectorAll('.card-button');
+            siblings.forEach(sibling => sibling.classList.remove('selected'));
+            btn.classList.add('selected');
+            
+            document.getElementById('nextBtn-step3-3').classList.add('visible');
+        }
+
+        function checkStep2Complete() {
+            const year = document.getElementById('startYear').value;
+            const month = document.getElementById('startMonth').value;
+            const day = document.getElementById('startDay').value;
+            
+            if (year !== '選択してください' && month !== '選択してください' && day !== '選択してください') {
+                formState.startDate = { year, month, day };
+                document.getElementById('nextBtn-step2').classList.add('visible');
+            } else {
+                document.getElementById('nextBtn-step2').classList.remove('visible');
+            }
+        }
+
+        function checkStep3_2Complete() {
+            const year = document.getElementById('birthYear').value;
+            const month = document.getElementById('birthMonth').value;
+            const day = document.getElementById('birthDay').value;
+            
+            if (year !== '選択してください' && month !== '選択してください' && day !== '選択してください') {
+                formState.birthDate = { year, month, day };
+                document.getElementById('nextBtn-step3-2').classList.add('visible');
+            } else {
+                document.getElementById('nextBtn-step3-2').classList.remove('visible');
+            }
+        }
+
+        function checkStep3_4Complete() {
+            const mileage = document.getElementById('annualMileage').value;
+            if (mileage !== '選択してください') {
+                formState.annualMileage = mileage;
+                document.getElementById('nextBtn-step3-4').classList.add('visible');
+            } else {
+                document.getElementById('nextBtn-step3-4').classList.remove('visible');
+            }
+        }
+
+        function checkStep5Complete() {
+            const prefVal = document.getElementById('prefecture').value;
+            if (prefVal !== '選択してください') {
+                formState.prefecture = prefVal;
+                document.getElementById('nextBtn-step5').classList.add('visible');
+            } else {
+                document.getElementById('nextBtn-step5').classList.remove('visible');
+            }
+        }
+
+        function progressToStep(targetStepId) {
+            // Step order
+            const stepOrder = ['step1', 'step2', 'step3', 'step3-2', 'step3-3', 'step3-4', 'step4', 'step5', 'step6'];
+            const targetIndex = stepOrder.indexOf(targetStepId);
+            
+            // Show target step and all previous
+            for (let i = 0; i < stepOrder.length; i++) {
+                const stepId = stepOrder[i];
+                const step = document.getElementById(stepId);
+                if (step) {
+                    if (i <= targetIndex) {
+                        step.classList.add('visible');
+                    } else {
+                        step.classList.remove('visible');
+                    }
+                }
+            }
+        }
+
+        function generateBikeCards() {
+            const count = document.getElementById('bikeCount').value;
+            
+            if (count === '選択してください') {
+                document.getElementById('bikeCardsContainer').innerHTML = '';
+                document.getElementById('submitContainer').classList.add('hidden');
+                return;
+            }
+
+            formState.bikeCount = count;
+            let bikeNum = count === '4' ? 4 : parseInt(count);
+
+            let html = '';
+            for (let i = 1; i <= bikeNum; i++) {
+                html += createBikeCard(i);
+            }
+
+            document.getElementById('bikeCardsContainer').innerHTML = html;
+            document.getElementById('submitContainer').classList.remove('hidden');
+        }
+
+        function createBikeCard(bikeIndex) {
+            return `
+                <div id="bikeCard-${bikeIndex}" class="bike-card bg-white rounded-lg p-6 shadow-sm border border-gray-200 mb-6">
+                    <h3 class="text-xl font-bold text-blue-700 mb-6">${bikeIndex}台目のバイク情報</h3>
+
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">【バイクにつけている名前】</label>
+                        <input type="text" id="bikeName-${bikeIndex}" placeholder="例：ドラちゃん" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-700 focus:border-transparent" onchange="updateBikeData(${bikeIndex}, 'name', this.value)">
+                    </div>
+
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">【バイクの色】</label>
+                        <div class="grid grid-cols-3 gap-4">
+                            <button type="button" class="color-button card-button border-2 border-gray-300 rounded-lg p-4 text-center hover:border-red-700 font-semibold" onclick="selectBikeColor(${bikeIndex}, 'red', this)" style="color: #7f1d1d;">
+                                🔴 赤
+                            </button>
+                            <button type="button" class="color-button card-button border-2 border-gray-300 rounded-lg p-4 text-center hover:border-blue-700 font-semibold" onclick="selectBikeColor(${bikeIndex}, 'blue', this)" style="color: #1e3a8a;">
+                                🔵 青
+                            </button>
+                            <button type="button" class="color-button card-button border-2 border-gray-300 rounded-lg p-4 text-center hover:border-gray-700 font-semibold" onclick="selectBikeColor(${bikeIndex}, 'black', this)" style="color: #374151;">
+                                ⚫ 黒
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">【バイク情報入力方法の選択】</label>
+                        <div class="grid grid-cols-2 gap-4">
+                            <button type="button" class="card-button border-2 border-gray-300 rounded-lg p-4 text-center hover:border-blue-700" onclick="selectInputMethod(${bikeIndex}, 'manual', this)">
+                                <div class="text-lg font-semibold text-gray-900">手入力</div>
+                            </button>
+                            <button type="button" class="card-button border-2 border-gray-300 rounded-lg p-4 text-center hover:border-blue-700" onclick="selectInputMethod(${bikeIndex}, 'ocr', this)">
+                                <div class="text-lg font-semibold text-gray-900">車検証情報から値を取得</div>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="manualInput-${bikeIndex}" class="hidden mb-6">
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">【メーカー名】</label>
+                            <select id="maker-${bikeIndex}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-700 focus:border-transparent" onchange="updateBikeData(${bikeIndex}, 'maker', this.value)">
+                                <option>選択してください</option>
+                                <option>ホンダ</option>
+                                <option>ヤマハ</option>
+                                <option>スズキ</option>
+                                <option>カワサキ</option>
+                                <option>BMW</option>
+                                <option>ハーレーダビッドソン</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">【排気量/タイプ】</label>
+                            <div class="grid grid-cols-3 gap-4">
+                                <button type="button" class="card-button border-2 border-gray-300 rounded-lg p-3 text-center hover:border-blue-700 text-sm" onclick="selectBikeType(${bikeIndex}, '原付', this)">
+                                    <div class="font-semibold text-gray-900">原付</div>
+                                    <div class="text-xs text-gray-600">125cc以下</div>
+                                </button>
+                                <button type="button" class="card-button border-2 border-gray-300 rounded-lg p-3 text-center hover:border-blue-700 text-sm" onclick="selectBikeType(${bikeIndex}, '軽二輪', this)">
+                                    <div class="font-semibold text-gray-900">軽二輪</div>
+                                    <div class="text-xs text-gray-600">125cc超〜250cc以下</div>
+                                </button>
+                                <button type="button" class="card-button border-2 border-gray-300 rounded-lg p-3 text-center hover:border-blue-700 text-sm" onclick="selectBikeType(${bikeIndex}, '小型二輪', this)">
+                                    <div class="font-semibold text-gray-900">小型二輪</div>
+                                    <div class="text-xs text-gray-600">250cc超</div>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="ocrInput-${bikeIndex}" class="hidden mb-6">
+                        <div class="grid grid-cols-2 gap-4 mb-6">
+                            <button type="button" class="card-button border-2 border-gray-300 rounded-lg p-4 text-center hover:border-blue-700" onclick="startOCR(${bikeIndex}, 'photo')">
+                                <div class="text-2xl mb-2">📸</div>
+                                <div class="text-lg font-semibold text-gray-900">車検証画像を撮影する</div>
+                                <div class="text-xs text-gray-600">(Take Photo)</div>
+                            </button>
+                            <button type="button" class="card-button border-2 border-gray-300 rounded-lg p-4 text-center hover:border-blue-700" onclick="startOCR(${bikeIndex}, 'upload')">
+                                <div class="text-2xl mb-2">📁</div>
+                                <div class="text-lg font-semibold text-gray-900">データをアップロードする</div>
+                                <div class="text-xs text-gray-600">(Upload Data)</div>
+                            </button>
+                        </div>
+
+                        <div id="ocrLoading-${bikeIndex}" class="hidden mb-6">
+                            <div class="flex items-center justify-center mb-3">
+                                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-700"></div>
+                                <span class="ml-3 text-blue-700 font-semibold">AI-OCR処理中...</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="loading-bar bg-blue-700 h-2 rounded-full"></div>
+                            </div>
+                        </div>
+
+                        <div id="ocrResults-${bikeIndex}" class="hidden space-y-4">
+                            <div class="ocr-input rounded-lg p-4">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">【メーカー名】（自動取得）</label>
+                                <input type="text" id="ocrMaker-${bikeIndex}" value="ホンダ" class="w-full px-3 py-2 border border-teal-300 rounded-lg bg-white" readonly>
+                            </div>
+                            <div class="ocr-input rounded-lg p-4">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">【排気量】（自動取得）</label>
+                                <input type="text" id="ocrType-${bikeIndex}" value="軽二輪（125cc超〜250cc以下）" class="w-full px-3 py-2 border border-teal-300 rounded-lg bg-white" readonly>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function selectInputMethod(bikeIndex, method, btn) {
+            const parent = btn.parentElement;
+            const siblings = parent.querySelectorAll('.card-button');
+            siblings.forEach(sibling => sibling.classList.remove('selected'));
+            btn.classList.add('selected');
+
+            const manualDiv = document.getElementById(`manualInput-${bikeIndex}`);
+            const ocrDiv = document.getElementById(`ocrInput-${bikeIndex}`);
+
+            if (method === 'manual') {
+                manualDiv.classList.remove('hidden');
+                ocrDiv.classList.add('hidden');
+            } else {
+                manualDiv.classList.add('hidden');
+                ocrDiv.classList.remove('hidden');
+            }
+
+            updateBikeData(bikeIndex, 'inputMethod', method);
+        }
+
+        function selectBikeType(bikeIndex, type, btn) {
+            const parent = btn.parentElement;
+            const siblings = parent.querySelectorAll('.card-button');
+            siblings.forEach(sibling => sibling.classList.remove('selected'));
+            btn.classList.add('selected');
+            
+            updateBikeData(bikeIndex, 'type', type);
+        }
+        
+        function selectBikeColor(bikeIndex, color, btn) {
+            // ボタンの選択状態を更新
+            const parent = btn.parentElement;
+            const siblings = parent.querySelectorAll('.color-button');
+            siblings.forEach(sibling => sibling.classList.remove('selected'));
+            btn.classList.add('selected');
+            
+            // バイクカードの背景色を更新
+            const bikeCard = document.getElementById(`bikeCard-${bikeIndex}`);
+            bikeCard.classList.remove('bg-red', 'bg-blue', 'bg-black');
+            bikeCard.classList.add(`bg-${color}`);
+            
+            // データを保存
+            updateBikeData(bikeIndex, 'color', color);
+        }
+
+        function startOCR(bikeIndex, method) {
+            const loadingDiv = document.getElementById(`ocrLoading-${bikeIndex}`);
+            const resultsDiv = document.getElementById(`ocrResults-${bikeIndex}`);
+
+            loadingDiv.classList.remove('hidden');
+            resultsDiv.classList.add('hidden');
+
+            setTimeout(() => {
+                loadingDiv.classList.add('hidden');
+                resultsDiv.classList.remove('hidden');
+                updateBikeData(bikeIndex, 'maker', 'ホンダ');
+                updateBikeData(bikeIndex, 'type', '軽二輪');
+            }, 3000);
+        }
+
+        function updateBikeData(bikeIndex, field, value) {
+            if (!formState.bikes[bikeIndex]) {
+                formState.bikes[bikeIndex] = {};
+            }
+            formState.bikes[bikeIndex][field] = value;
+        }
+
+        function submitForm() {
+            const bikeInfo = [];
+            const colorMap = {
+                'red': '赤',
+                'blue': '青',
+                'black': '黒'
+            };
+            
+            for (let i = 1; i <= parseInt(formState.bikeCount); i++) {
+                const bike = formState.bikes[i] || {};
+                const finalMaker = bike.inputMethod === 'ocr' ? 'ホンダ' : (bike.maker || '（未選択）');
+                const finalType = bike.inputMethod === 'ocr' ? '軽二輪（125cc超〜250cc以下）' : (bike.type || '（未選択）');
+                const colorDisplay = bike.color ? colorMap[bike.color] || '（未選択）' : '（未選択）';
+                
+                bikeInfo.push(`
+${i}台目：
+- 名前: ${bike.name || '（未入力）'}
+- 色: ${colorDisplay}
+- メーカー: ${finalMaker}
+- 排気量: ${finalType}
+                `);
+            }
+
+            alert(`【見積もり情報の確認】\n\nー保険情報ー\n生年月日: ${formState.birthDate.year}年 ${formState.birthDate.month} ${formState.birthDate.day}日\n運転免許証の色: ${formState.licenseColor}\n年間走行距離: ${formState.annualMileage}\n\nー${bikeInfo.join('ー')}ー\n\nこの情報で見積もりを進めますか？`);
+        }
+    </script>
+</body>
+</html>
