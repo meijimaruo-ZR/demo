@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>バイク保険 - 保険加入状況の選択</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // ページ全体を非表示にする
+        document.documentElement.style.display = 'none';
+        
+        // 認証チェック関数
+        function checkAuthentication() {
+            const authenticated = sessionStorage.getItem('authenticated');
+            
+            // 既に認証済みならページを表示
+            if (authenticated === 'true') {
+                document.documentElement.style.display = '';
+                return;
+            }
+            
+            // パスワード入力ループ
+            let isValid = false;
+            let attempts = 0;
+            const maxAttempts = 3;
+            
+            while (!isValid && attempts < maxAttempts) {
+                const password = prompt(
+                    attempts === 0 
+                        ? 'このページを表示するにはパスワードが必要です。\n\nパスワードを入力してください：'
+                        : `パスワードが間違っています。\n\nもう一度入力してください（残り${maxAttempts - attempts}回）：`
+                );
+                
+                // キャンセルボタンの場合
+                if (password === null) {
+                    showAccessDenied('キャンセルしました');
+                    return;
+                }
+                
+                // 空の場合
+                if (password === '') {
+                    attempts++;
+                    continue;
+                }
+                
+                // パスワード確認
+                if (password === 'insurance2026') {
+                    isValid = true;
+                    sessionStorage.setItem('authenticated', 'true');
+                    document.documentElement.style.display = '';
+                } else {
+                    attempts++;
+                }
+            }
+            
+            // 試行回数超過
+            if (!isValid) {
+                showAccessDenied('試行回数が超過しました');
+            }
+        }
+        
+        // アクセス拒否画面を表示
+        function showAccessDenied(reason) {
+            document.documentElement.style.display = '';
+            document.body.innerHTML = `
+                <div style="display: flex; align-items: center; justify-content: center; min-height: 100vh; background-color: #f3f4f6;">
+                    <div style="text-align: center; padding: 40px; background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
+                        <h1 style="color: #dc2626; font-size: 24px; margin-bottom: 16px;">🔒 アクセス拒否</h1>
+                        <p style="color: #666; font-size: 16px; margin-bottom: 24px;">申し訳ありませんが、このページへのアクセスは制限されています。</p>
+                        <p style="color: #999; font-size: 14px;">理由: ${reason}</p>
+                        <button onclick="location.reload()" style="margin-top: 24px; padding: 12px 24px; background-color: #1e5abd; color: white; border: none; border-radius: 6px; font-size: 16px; cursor: pointer; transition: background-color 0.2s;">
+                            もう一度試す
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // DOMContentLoaded 後に認証チェック実行
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', checkAuthentication);
+        } else {
+            checkAuthentication();
+        }
+    </script>
+    <style>
+        /* Animations */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes progress {
+            0% { width: 0%; }
+            50% { width: 70%; }
+            100% { width: 100%; }
+        }
+
+        /* Animation utility classes */
+        .animate-fade-in {
+            animation: fadeIn 0.4s ease-in-out;
+        }
+
+        .animate-spin-custom {
+            animation: spin 1s linear infinite;
+        }
+
+        .bike-card {
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .loading-bar {
+            animation: progress 3s ease-in-out;
+        }
+
+        /* Card button styles */
+        .card-button {
+            transition: all 0.2s ease;
+        }
+
+        .card-button:hover {
+            transform: translateY(-2px);
+        }
+
+        .card-button.selected {
+            border-color: rgb(30, 90, 189);
+            background-color: rgb(219, 234, 254);
+        }
+
+        /* Step section styles */
+        .step-section {
+            opacity: 0;
+            max-height: 0;
+            overflow: hidden;
+            transition: opacity 0.4s ease, max-height 0.4s ease;
+            pointer-events: none;
+        }
+
+        .step-section.visible {
+            opacity: 1;
+            max-height: 2000px;
+            pointer-events: auto;
+        }
+
+        /* OCR input styles */
+        .ocr-input {
+            background-color: rgb(240, 253, 250);
+            border: 2px solid rgb(45, 212, 191);
+        }
+
+        /* Bike card color classes */
+        .bike-card.bg-red {
+            background-color: rgb(254, 242, 242);
+        }
+
+        .bike-card.bg-blue {
+            background-color: rgb(240, 249, 255);
+        }
+
+        .bike-card.bg-black {
+            background-color: rgb(249, 250, 251);
+        }
+
+        /* Focus styles */
+        input:focus,
+        select:focus {
+            outline: none;
+        }
+
+        .bike-card {
+            rounded-lg p-4 border-2 border-gray-200 transition-all duration-300;
+        }
+
+        .bike-card.active {
+            border-blue-500 shadow-md;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div id="app" class="min-h-screen">
+        <div class="py-8 px-4 sm:px-6 lg:px-8">
+            <div class="max-w-4xl mx-auto">
+                <div class="mb-8">
+                    <h1 class="text-4xl font-bold text-blue-700 mb-2">バイク保険</h1>
+                    <p class="text-gray-600">お見積もり手続き</p>
+                </div>
+
+                <div id="messageContainer" class="mb-6"></div>
+
+                <form id="mainForm" class="space-y-6">
+                    <!-- Step 1: Insurance Status -->
+                    <div id="step-1" class="step-section visible bg-white rounded-lg p-6 shadow-sm border border-gray-200 animate-fade-in">
+                        <label class="flex items-center mb-4">
+                            <svg class="w-5 h-5 text-blue-700 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 2a1 1 0 00-.894.553L7.382 7H4a2 2 0 00-2 2v6a2 2 0 002 2h12a2 2 0 002-2V9a2 2 0 00-2-2h-3.382l-1.724-4.447A1 1 0 0010 2zM6 15a3 3 0 11-6 0 3 3 0 016 0zm-1-6a1 1 0 11-2 0 1 1 0 012 0z" clip-rule="evenodd" />
+                            </svg>
+                            <span class="text-lg font-semibold text-gray-900">【保険加入状況】</span>
+                        </label>
+                        <div class="grid grid-cols-1 gap-4" id="insuranceStatusContainer">
+                            <button type="button" class="card-button border-2 border-gray-300 rounded-lg p-4 text-center hover:border-blue-700 transition-all" data-insurance="other-switching">
+                                <div class="text-lg font-semibold text-gray-900">他社で加入中</div>
+                            </button>
+                            <button type="button" class="card-button border-2 border-gray-300 rounded-lg p-4 text-center hover:border-blue-700 transition-all" data-insurance="additional">
+                                <div class="text-lg font-semibold text-gray-900">追加加入する</div>
+                            </button>
+                            <button type="button" class="card-button border-2 border-gray-300 rounded-lg p-4 text-center hover:border-blue-700 transition-all" data-insurance="first-time">
+                                <div class="text-lg font-semibold text-gray-900">はじめて加入する</div>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Insurance Start Date -->
+                    <div id="step-2" class="step-section bg-white rounded-lg p-6 shadow-sm border border-gray-200 animate-fade-in">
+                        <label class="flex items-center mb-4">
+                            <svg class="w-5 h-5 text-blue-700 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M6 2a1 1 0 00-1 1v2H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v2H7V3a1 1 0 00-1-1zm0 5h12v10H4V7z" />
+                            </svg>
+                            <span class="text-lg font-semibold text-gray-900">【保険開始日入力】</span>
+                        </label>
+                        <div class="grid grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">年</label>
+                                <select id="startYear" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-700 focus:border-transparent">
+                                    <option value="">選択してください</option>
+                                    <option value="2026">2026</option>
+                                    <option value="2027">2027</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">月</label>
+                                <select id="startMonth" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-700 focus:border-transparent">
+                                    <option value="">選択してください</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">日</label>
+                                <select id="startDay" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-700 focus:border-transparent">
+                                    <option value="">選択してください</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Bike Owner -->
+                    <div id="step-3" class="step-section bg-white rounded-lg p-6 shadow-sm border border-gray-200 animate-fade-in">
+                        <label class="flex items-center mb-4">
+                            <svg class="w-5 h-5 text-blue-700 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
+                            </svg>
+                            <span class="text-lg font-semibold text-gray-900">【バイクの所有者】</span>
+                        </label>
+                        <div class="grid grid-cols-3 gap-4" id="bikeOwnerContainer">
+                            <button type="button" class="card-button border-2 border-gray-300 rounded-lg p-4 text-center hover:border-blue-700 transition-all" data-owner="ご本人">
+                                <div class="text-lg font-semibold text-gray-900">ご本人</div>
+                            </button>
+                            <button type="button" class="card-button border-2 border-gray-300 rounded-lg p-4 text-center hover:border-blue-700 transition-all" data-owner="配偶者">
+                                <div class="text-lg font-semibold text-gray-900">配偶者</div>
+                            </button>
+                            <button type="button" class="card-button border-2 border-gray-300 rounded-lg p-4 text-center hover:border-blue-700 transition-all" data-owner="その他">
+                                <div class="text-lg font-semibold text-gray-900">その他</div>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Step 4: Birthday & License Color -->
+                    <!-- Step 4: Birthday -->
+                    <div id="step-4" class="step-section bg-white rounded-lg p-6 shadow-sm border border-gray-200 animate-fade-in">
+                        <label class="flex items-center mb-6">
+                            <svg class="w-5 h-5 text-blue-700 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M6 2a1 1 0 00-1 1v2H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v2H7V3a1 1 0 00-1-1zm0 5h12v10H4V7z" />
+                            </svg>
+                            <span class="text-lg font-semibold text-gray-900">【ご契約者の生年月日】</span>
+                        </label>
+
+                        <div class="mb-6">
+                            <label class="block text-sm font-medium text-gray-700 mb-3">生年月日</label>
+                            <div class="grid grid-cols-3 gap-4">
+                                <select id="birthYear" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-700 focus:border-transparent">
+                                    <option value="">年</option>
+                                </select>
+                                <select id="birthMonth" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-700 focus:border-transparent">
+                                    <option value="">月</option>
+                                </select>
+                                <select id="birthDay" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-700 focus:border-transparent">
+                                    <option value="">日</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 4.5: License Color -->
+                    <div id="step-5" class="step-section bg-white rounded-lg p-6 shadow-sm border border-gray-200 animate-fade-in">
+                        <label class="flex items-center mb-6">
+                            <svg class="w-5 h-5 text-blue-700 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" />
+                            </svg>
+                            <span class="text-lg font-semibold text-gray-900">【運転免許証の色】</span>
+                        </label>
+
+                        <div>
+                            <div class="grid grid-cols-3 gap-4" id="licenseColorContainer">
+                                <button type="button" class="card-button border-2 border-gray-300 rounded-lg p-4 text-center hover:border-blue-700 transition-all" data-license="グリーン">
+                                    <div class="text-lg font-semibold text-gray-900">🟢 グリーン</div>
+                                </button>
+                                <button type="button" class="card-button border-2 border-gray-300 rounded-lg p-4 text-center hover:border-blue-700 transition-all" data-license="ブルー">
+                                    <div class="text-lg font-semibold text-gray-900">🟦 ブルー</div>
+                                </button>
+                                <button type="button" class="card-button border-2 border-gray-300 rounded-lg p-4 text-center hover:border-blue-700 transition-all" data-license="ゴールド">
+                                    <div class="text-lg font-semibold text-gray-900">🟨 ゴールド</div>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 5: Bike Use -->
+                    <div id="step-6" class="step-section bg-white rounded-lg p-6 shadow-sm border border-gray-200 animate-fade-in">
+                        <label class="flex items-center mb-4">
+                            <svg class="w-5 h-5 text-blue-700 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9V5H5.05z" clip-rule="evenodd" />
+                            </svg>
+                            <span class="text-lg font-semibold text-gray-900">【バイクの使用目的】</span>
+                        </label>
+                        <div class="grid grid-cols-3 gap-4" id="bikeUseContainer">
+                            <button type="button" class="card-button border-2 border-gray-300 rounded-lg p-4 text-center hover:border-blue-700 transition-all" data-use="日常・レジャー">
+                                <div class="text-lg font-semibold text-gray-900">日常・レジャー</div>
+                            </button>
+                            <button type="button" class="card-button border-2 border-gray-300 rounded-lg p-4 text-center hover:border-blue-700 transition-all" data-use="通勤・通学">
+                                <div class="text-lg font-semibold text-gray-900">通勤・通学</div>
+                            </button>
+                            <button type="button" class="card-button border-2 border-gray-300 rounded-lg p-4 text-center hover:border-blue-700 transition-all" data-use="業務使用">
+                                <div class="text-lg font-semibold text-gray-900">業務使用</div>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Step 7: Prefecture -->
+                    <div id="step-7" class="step-section bg-white rounded-lg p-6 shadow-sm border border-gray-200 animate-fade-in">
+                        <label class="flex items-center mb-4">
+                            <svg class="w-5 h-5 text-blue-700 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
+                            </svg>
+                            <span class="text-lg font-semibold text-gray-900">【バイクの主な使用地（都道府県）】</span>
+                        </label>
+                        <select id="prefectureSelect" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-700 focus:border-transparent">
+                            <option value="">選択してください</option>
+                        </select>
+                    </div>
+
+                    <!-- Step 8: Bike Count -->
+                    <div id="step-8" class="step-section bg-white rounded-lg p-6 shadow-sm border border-gray-200 animate-fade-in">
+                        <label class="flex items-center mb-4">
+                            <svg class="w-5 h-5 text-blue-700 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M7 3a1 1 0 000 2h6a1 1 0 000-2H7zM3 5a2 2 0 012-2h8a2 2 0 012 2v8a1 1 0 100 2H3a1 1 0 100-2V5z" />
+                            </svg>
+                            <span class="text-lg font-semibold text-gray-900">【登録するバイク台数】</span>
+                        </label>
+                        <select id="bikeCountSelect" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-700 focus:border-transparent">
+                            <option value="0">選択してください</option>
+                            <option value="1">1台</option>
+                            <option value="2">2台</option>
+                            <option value="3">3台</option>
+                            <option value="4">4台</option>
+                        </select>
+                    </div>
+
+                    <!-- Bike Details Sections -->
+                    <div id="bikesContainer" class="space-y-6"></div>
+
+                    <!-- Submit Button -->
+                    <button type="button" id="submitBtn" class="w-full bg-orange-500 text-white font-semibold py-3 rounded-lg hover:bg-orange-600 transition-colors hidden">
+                        見積もりを確認する
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div id="confirmModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-8 max-w-2xl max-h-96 overflow-y-auto">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">登録情報の確認</h2>
+            <div id="confirmContent" class="text-gray-700 whitespace-pre-line mb-6 text-sm"></div>
+            <div class="flex gap-4 justify-end">
+                <button class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50" onclick="document.getElementById('confirmModal').classList.add('hidden')">キャンセル</button>
+                <button class="px-6 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600" onclick="submitForm()">登録する</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State management
+        const state = {
+            insuranceStatus: null,
+            startDate: { year: '', month: '', day: '' },
+            bikeOwner: '',
+            birthday: { year: '', month: '', day: '' },
+            licenseColor: '',
+            bikeUse: '',
+            prefecture: '',
+            bikeCount: 0,
+            bikes: []
+        };
+
+        const visibleSteps = new Set([1]);
+
+        // Data
+        const prefectures = [
+            '北海道', '青森県', '岩手県', '宮城県', '秋田県', '山形県', '福島県',
+            '茨城県', '栃木県', '群馬県', '埼玉県', '千葉県', '東京都', '神奈川県',
+            '新潟県', '富山県', '石川県', '福井県', '山梨県', '長野県', '岐阜県',
+            '静岡県', '愛知県', '三重県', '滋賀県', '京都府', '大阪府', '兵庫県',
+            '奈良県', '和歌山県', '鳥取県', '島根県', '岡山県', '広島県', '山口県',
+            '徳島県', '香川県', '愛媛県', '高知県', '福岡県', '佐賀県', '長崎県',
+            '熊本県', '大分県', '宮崎県', '鹿児島県', '沖縄県'
+        ];
+
+        const months = Array.from({ length: 12 }, (_, i) => `${i + 1}月`);
+        const days = [1, 2, 3, 4, 5, 10, 15, 20, 25, 30];
+        const birthYears = Array.from({ length: 61 }, (_, i) => (2010 - i).toString());
+        const makers = ['ホンダ', 'ヤマハ', 'スズキ', 'カワサキ', 'BMW', 'ハーレーダビッドソン'];
+        const types = ['原付 (125cc以下)', '軽二輪 (125cc超〜250cc以下)', '小型二輪 (250cc超)'];
+        const carriers = ['東京海上日動', '三井住友海上', '損保ジャパン', 'あいおいニッセイ同和', 'チューリッヒ', 'アクサダイレクト', 'その他'];
+        const grades = ['20等級', '19等級', '18等級', '17等級', '16等級', '15等級', '14等級', '13等級', '12等級', '11等級', '10等級', '9等級', '8等級', '7等級', '6等級', '5等級', '4等級', '3等級', '2等級'];
+        const accidentTypes = ['3等級ダウン事故', '1等級ダウン事故', 'ノーカウント事故'];
+        const colors = ['赤', '青', '黒', '白', '黄'];
+
+        // Initialize
+        function init() {
+            populateSelects();
+            setupEventListeners();
+        }
+
+        function populateSelects() {
+            // Start date months
+            const startMonthSelect = document.getElementById('startMonth');
+            months.forEach(m => {
+                const option = document.createElement('option');
+                option.value = m;
+                option.textContent = m;
+                startMonthSelect.appendChild(option);
+            });
+
+            // Start date days
+            const startDaySelect = document.getElementById('startDay');
+            days.forEach(d => {
+                const option = document.createElement('option');
+                option.value = d;
+                option.textContent = d;
+                startDaySelect.appendChild(option);
+            });
+
+            // Birth months
+            const birthMonthSelect = document.getElementById('birthMonth');
+            months.forEach(m => {
+                const option = document.createElement('option');
+                option.value = m;
+                option.textContent = m;
+                birthMonthSelect.appendChild(option);
+            });
+
+            // Birth days
+            const birthDaySelect = document.getElementById('birthDay');
+            Array.from({ length: 31 }, (_, i) => i + 1).forEach(d => {
+                const option = document.createElement('option');
+                option.value = d;
+                option.textContent = d;
+                birthDaySelect.appendChild(option);
+            });
+
+            // Birth years
+            const birthYearSelect = document.getElementById('birthYear');
+            birthYears.forEach(y => {
+                const option = document.createElement('option');
+                option.value = y;
+                option.textContent = y;
+                birthYearSelect.appendChild(option);
+            });
+
+            // Prefectures
+            const prefectureSelect = document.getElementById('prefectureSelect');
+            prefectures.forEach(p => {
+                const option = document.createElement('option');
+                option.value = p;
+                option.textContent = p;
+                prefectureSelect.appendChild(option);
+            });
+        }
+
+        function showMessage(message, type = 'info') {
+            const container = document.getElementById('messageContainer');
+            if (message === '') {
+                container.innerHTML = '';
+                return;
+            }
+            const bgColor = type === 'info' ? 'bg-blue-100' : 'bg-green-100';
+            const textColor = type === 'info' ? 'text-blue-800' : 'text-green-800';
+            container.innerHTML = `<div class="p-4 rounded-lg ${bgColor} ${textColor} text-center">${message}</div>`;
+        }
+
+        function setupEventListeners() {
+            // Insurance status
+            document.querySelectorAll('[data-insurance]').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const status = e.currentTarget.dataset.insurance;
+                    state.insuranceStatus = status;
+                    updateSelection(e.currentTarget.parentElement, e.currentTarget);
+                    
+                    if (status === 'other-switching') {
+                        showMessage('');
+                        showStep(2);
+                    } else if (status === 'additional') {
+                        showMessage('マイページへ遷移します（モック表示）');
+                        hideStepsFrom(2);
+                    } else if (status === 'first-time') {
+                        showMessage('はじめて加入するフローへ遷移します（モック表示）');
+                        hideStepsFrom(2);
+                    }
+                });
+            });
+
+            // Start date
+            document.getElementById('startYear').addEventListener('change', (e) => {
+                state.startDate.year = e.target.value;
+                checkStartDate();
+            });
+            document.getElementById('startMonth').addEventListener('change', (e) => {
+                state.startDate.month = e.target.value;
+                checkStartDate();
+            });
+            document.getElementById('startDay').addEventListener('change', (e) => {
+                state.startDate.day = e.target.value;
+                checkStartDate();
+            });
+
+            // Bike owner
+            document.querySelectorAll('[data-owner]').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    state.bikeOwner = e.currentTarget.dataset.owner;
+                    updateSelection(e.currentTarget.parentElement, e.currentTarget);
+                    showStep(4);
+                });
+            });
+
+            // Birth date
+            document.getElementById('birthYear').addEventListener('change', (e) => {
+                state.birthday.year = e.target.value;
+                checkBirthday();
+            });
+            document.getElementById('birthMonth').addEventListener('change', (e) => {
+                state.birthday.month = e.target.value;
+                checkBirthday();
+            });
+            document.getElementById('birthDay').addEventListener('change', (e) => {
+                state.birthday.day = e.target.value;
+                checkBirthday();
+            });
+
+            // License color
+            document.querySelectorAll('[data-license]').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    state.licenseColor = e.currentTarget.dataset.license;
+                    updateSelection(e.currentTarget.parentElement, e.currentTarget);
+                    // Step 4.5（免許証色）完了 → Step 6（使用目的）を表示
+                    showStep(6);
+                });
+            });
+
+            // Bike use
+            document.querySelectorAll('[data-use]').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    state.bikeUse = e.currentTarget.dataset.use;
+                    updateSelection(e.currentTarget.parentElement, e.currentTarget);
+                    showStep(7);
+                });
+            });
+
+            // Prefecture
+            document.getElementById('prefectureSelect').addEventListener('change', (e) => {
+                state.prefecture = e.target.value;
+                if (e.target.value) {
+                    showStep(8);
+                }
+            });
+
+            // Bike count
+            document.getElementById('bikeCountSelect').addEventListener('change', (e) => {
+                const count = parseInt(e.target.value);
+                state.bikeCount = count;
+                state.bikes = Array.from({ length: count }, (_, i) => ({
+                    id: i + 1,
+                    name: '',
+                    color: '',
+                    inputMethod: 'manual',
+                    maker: '',
+                    type: '',
+                    annualDistance: '',
+                    carrier: '',
+                    contractPeriod: '1year',
+                    startDate: { year: '', month: '', day: '' },
+                    endDate: { year: '', month: '', day: '' },
+                    grade: '',
+                    accidentCount: '',
+                    accidentType: '',
+                    accidentCoefficientYear: '',
+                    ocrLoading: false
+                }));
+                renderBikes();
+                if (count > 0) {
+                    document.getElementById('submitBtn').classList.remove('hidden');
+                } else {
+                    document.getElementById('submitBtn').classList.add('hidden');
+                }
+            });
+
+            // Submit
+            document.getElementById('submitBtn').addEventListener('click', (e) => {
+                e.preventDefault();
+                showConfirmModal();
+            });
+        }
+
+        function updateSelection(container, selectedBtn) {
+            container.querySelectorAll('.card-button').forEach(btn => {
+                btn.classList.remove('selected', 'border-blue-700', 'bg-blue-50');
+                btn.classList.add('border-gray-300');
+            });
+            selectedBtn.classList.remove('border-gray-300');
+            selectedBtn.classList.add('selected', 'border-blue-700', 'bg-blue-50');
+        }
+
+        function checkStartDate() {
+            if (state.startDate.year && state.startDate.month && state.startDate.day) {
+                showStep(3);
+            }
+        }
+
+        function checkBirthday() {
+            if (state.birthday.year && state.birthday.month && state.birthday.day) {
+                showStep(5);
+            }
+        }
+
+        function showStep(stepNumber) {
+            const stepsToShow = Array.from({ length: stepNumber }, (_, i) => i + 1);
+            stepsToShow.forEach(step => {
+                const stepEl = document.getElementById(`step-${step}`);
+                if (stepEl && !visibleSteps.has(step)) {
+                    stepEl.classList.remove('hidden');
+                    stepEl.classList.add('visible');
+                    visibleSteps.add(step);
+                }
+            });
+        }
+
+        function hideStepsFrom(stepNumber) {
+            const totalSteps = 7;
+            for (let i = stepNumber; i <= totalSteps; i++) {
+                const stepEl = document.getElementById(`step-${i}`);
+                if (stepEl) {
+                    stepEl.classList.remove('visible');
+                    stepEl.classList.add('hidden');
+                    visibleSteps.delete(i);
+                }
+            }
+            // バイク詳細とボタンも非表示にする
+            document.getElementById('bikesContainer').innerHTML = '';
+            document.getElementById('submitBtn').classList.add('hidden');
+            document.getElementById('bikeCountSelect').value = '0';
+            state.bikeCount = 0;
+            state.bikes = [];
+        }
+
+        function getCardBgColor(color) {
+            const colorMap = {
+                '赤': 'bg-red',
+                '青': 'bg-blue',
+                '黒': 'bg-black',
+                '白': 'bg-white',
+                '黄': 'bg-yellow-50'
+            };
+            return colorMap[color] || 'bg-white';
+        }
+
+        function renderBikes() {
+            const container = document.getElementById('bikesContainer');
+            container.innerHTML = '';
+
+            state.bikes.forEach((bike, idx) => {
+                const bikeSection = document.createElement('div');
+                bikeSection.id = `bikeCard-${bike.id}`;
+                bikeSection.className = `bike-card ${getCardBgColor(bike.color)} rounded-lg p-6 shadow-sm border border-gray-200`;
+                
+                bikeSection.innerHTML = `
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-lg font-semibold text-gray-900">バイク ${idx + 1}</h3>
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm font-medium text-gray-600">台数: ${idx + 1}/${state.bikeCount}</span>
+                        </div>
+                    </div>
+
+                    <!-- Bike Name and Color -->
+                    <div class="grid grid-cols-2 gap-4 mb-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">バイク名</label>
+                            <input type="text" placeholder="例：愛車の名前" value="${bike.name}" 
+                                onchange="updateBike(${bike.id}, 'name', this.value)"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-700 focus:border-transparent">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">【バイクの色】</label>
+                            <div class="grid grid-cols-3 gap-4">
+                                <button type="button" class="color-button card-button border-2 ${bike.color === '赤' ? 'border-blue-700 bg-blue-50' : 'border-gray-300'} rounded-lg p-4 text-center hover:border-red-700 font-semibold" onclick="selectBikeColor(${bike.id}, 'red', this)" style="color: #7f1d1d;">
+                                    🔴 赤
+                                </button>
+                                <button type="button" class="color-button card-button border-2 ${bike.color === '青' ? 'border-blue-700 bg-blue-50' : 'border-gray-300'} rounded-lg p-4 text-center hover:border-blue-700 font-semibold" onclick="selectBikeColor(${bike.id}, 'blue', this)" style="color: #1e3a8a;">
+                                    🔵 青
+                                </button>
+                                <button type="button" class="color-button card-button border-2 ${bike.color === '黒' ? 'border-blue-700 bg-blue-50' : 'border-gray-300'} rounded-lg p-4 text-center hover:border-gray-700 font-semibold" onclick="selectBikeColor(${bike.id}, 'black', this)" style="color: #374151;">
+                                    ⚫ 黒
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Input Method Selection -->
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">バイク情報の入力方法</label>
+                        <div class="grid grid-cols-2 gap-4">
+                            <button type="button" class="method-btn border-2 ${bike.inputMethod === 'manual' ? 'border-blue-700 bg-blue-50' : 'border-gray-300'} rounded-lg p-4 text-center hover:border-blue-700 transition-all"
+                                onclick="updateBike(${bike.id}, 'inputMethod', 'manual'); renderBikes()">
+                                <div class="text-lg font-semibold text-gray-900">手入力</div>
+                            </button>
+                            <button type="button" class="method-btn border-2 ${bike.inputMethod === 'ocr' ? 'border-blue-700 bg-blue-50' : 'border-gray-300'} rounded-lg p-4 text-center hover:border-blue-700 transition-all"
+                                onclick="updateBike(${bike.id}, 'inputMethod', 'ocr'); renderBikes()">
+                                <div class="text-lg font-semibold text-gray-900">AI-OCR読込</div>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Manual Input Section -->
+                    ${bike.inputMethod === 'manual' ? `
+                        <!-- Bike Specifications (Manual) -->
+                        <div class="grid grid-cols-2 gap-4 mb-6">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">メーカー</label>
+                                <select onchange="updateBike(${bike.id}, 'maker', this.value)" 
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-700">
+                                    <option value="">選択してください</option>
+                                    ${makers.map(m => `<option value="${m}" ${bike.maker === m ? 'selected' : ''}>${m}</option>`).join('')}
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">バイクタイプ</label>
+                                <select onchange="updateBike(${bike.id}, 'type', this.value)" 
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-700">
+                                    <option value="">選択してください</option>
+                                    ${types.map(t => `<option value="${t}" ${bike.type === t ? 'selected' : ''}>${t}</option>`).join('')}
+                                </select>
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    <!-- OCR Input Section -->
+                    ${bike.inputMethod === 'ocr' ? `
+                        <div class="mb-6">
+                            <div class="grid grid-cols-2 gap-4 mb-6">
+                                <button type="button" class="card-button border-2 border-gray-300 rounded-lg p-4 text-center hover:border-blue-700" onclick="startOCR(${bike.id}, 'photo')">
+                                    <div class="text-2xl mb-2">📸</div>
+                                    <div class="text-lg font-semibold text-gray-900">車検証画像を撮影する</div>
+                                    <div class="text-xs text-gray-600">(Take Photo)</div>
+                                </button>
+                                <button type="button" class="card-button border-2 border-gray-300 rounded-lg p-4 text-center hover:border-blue-700" onclick="startOCR(${bike.id}, 'upload')">
+                                    <div class="text-2xl mb-2">📁</div>
+                                    <div class="text-lg font-semibold text-gray-900">データをアップロードする</div>
+                                    <div class="text-xs text-gray-600">(Upload Data)</div>
+                                </button>
+                            </div>
+
+                            ${bike.ocrLoading ? `
+                                <div class="mb-6">
+                                    <div class="flex items-center justify-center mb-3">
+                                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-700"></div>
+                                        <span class="ml-3 text-blue-700 font-semibold">AI-OCR処理中...</span>
+                                    </div>
+                                    <div class="w-full bg-gray-200 rounded-full h-2">
+                                        <div class="loading-bar bg-blue-700 h-2 rounded-full"></div>
+                                    </div>
+                                </div>
+                            ` : ''}
+
+                            ${!bike.ocrLoading && bike.maker ? `
+                                <div class="space-y-4">
+                                    <div class="ocr-input rounded-lg p-4">
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">【メーカー名】（自動取得）</label>
+                                        <input type="text" value="${bike.maker}" class="w-full px-3 py-2 border border-teal-300 rounded-lg bg-white" readonly>
+                                    </div>
+                                    <div class="ocr-input rounded-lg p-4">
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">【排気量】（自動取得）</label>
+                                        <input type="text" value="${bike.type}" class="w-full px-3 py-2 border border-teal-300 rounded-lg bg-white" readonly>
+                                    </div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    ` : ''}
+
+                    <!-- Annual Distance -->
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">年間走行距離</label>
+                        <select onchange="updateBike(${bike.id}, 'annualDistance', this.value)" 
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-700">
+                            <option value="">選択してください</option>
+                            <option value="5000km以下" ${bike.annualDistance === '5000km以下' ? 'selected' : ''}>5000km以下</option>
+                            <option value="5000〜10000km" ${bike.annualDistance === '5000〜10000km' ? 'selected' : ''}>5000〜10000km</option>
+                            <option value="10000km超" ${bike.annualDistance === '10000km超' ? 'selected' : ''}>10000km超</option>
+                        </select>
+                    </div>
+
+                    <!-- Current Insurance -->
+                    <div class="border-t pt-6 mb-6">
+                        <h4 class="text-base font-semibold text-gray-900 mb-4">現在の加入保険情報</h4>
+                        
+                        <div class="grid grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">保険会社</label>
+                                <select onchange="updateBike(${bike.id}, 'carrier', this.value)" 
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-700">
+                                    <option value="">選択してください</option>
+                                    ${carriers.map(c => `<option value="${c}" ${bike.carrier === c ? 'selected' : ''}>${c}</option>`).join('')}
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">契約期間</label>
+                                <select onchange="updateBike(${bike.id}, 'contractPeriod', this.value); renderBikes()" 
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-700">
+                                    <option value="1year" ${bike.contractPeriod === '1year' ? 'selected' : ''}>1年契約</option>
+                                    <option value="other" ${bike.contractPeriod === 'other' ? 'selected' : ''}>その他</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-4 mb-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">${bike.contractPeriod === '1year' ? '終了日' : '開始日'}</label>
+                                <div class="grid grid-cols-3 gap-1">
+                                    <input type="text" placeholder="年" maxlength="4" value="${bike.contractPeriod === '1year' ? bike.endDate.year : bike.startDate.year}"
+                                        onchange="updateBike(${bike.id}, '${bike.contractPeriod === '1year' ? 'endDate' : 'startDate'}', {...(bike.contractPeriod === '1year' ? bike.endDate : bike.startDate), year: this.value})"
+                                        class="w-full px-2 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-700 focus:border-transparent text-sm">
+                                    <input type="text" placeholder="月" maxlength="2" value="${bike.contractPeriod === '1year' ? bike.endDate.month : bike.startDate.month}"
+                                        onchange="updateBike(${bike.id}, '${bike.contractPeriod === '1year' ? 'endDate' : 'startDate'}', {...(bike.contractPeriod === '1year' ? bike.endDate : bike.startDate), month: this.value})"
+                                        class="w-full px-2 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-700 focus:border-transparent text-sm">
+                                    <input type="text" placeholder="日" maxlength="2" value="${bike.contractPeriod === '1year' ? bike.endDate.day : bike.startDate.day}"
+                                        onchange="updateBike(${bike.id}, '${bike.contractPeriod === '1year' ? 'endDate' : 'startDate'}', {...(bike.contractPeriod === '1year' ? bike.endDate : bike.startDate), day: this.value})"
+                                        class="w-full px-2 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-700 focus:border-transparent text-sm">
+                                </div>
+                            </div>
+                            ${bike.contractPeriod === 'other' ? `
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">終了日</label>
+                                    <div class="grid grid-cols-3 gap-1">
+                                        <input type="text" placeholder="年" maxlength="4" value="${bike.endDate.year}"
+                                            onchange="updateBike(${bike.id}, 'endDate', {...bike.endDate, year: this.value})"
+                                            class="w-full px-2 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-700 focus:border-transparent text-sm">
+                                        <input type="text" placeholder="月" maxlength="2" value="${bike.endDate.month}"
+                                            onchange="updateBike(${bike.id}, 'endDate', {...bike.endDate, month: this.value})"
+                                            class="w-full px-2 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-700 focus:border-transparent text-sm">
+                                        <input type="text" placeholder="日" maxlength="2" value="${bike.endDate.day}"
+                                            onchange="updateBike(${bike.id}, 'endDate', {...bike.endDate, day: this.value})"
+                                            class="w-full px-2 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-700 focus:border-transparent text-sm">
+                                    </div>
+                                </div>
+                            ` : ''}
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">ノンフリート等級</label>
+                                <select onchange="updateBike(${bike.id}, 'grade', this.value)" 
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-700">
+                                    <option value="">選択してください</option>
+                                    ${grades.map(g => `<option value="${g}" ${bike.grade === g ? 'selected' : ''}>${g}</option>`).join('')}
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">事故回数</label>
+                                <select onchange="updateBike(${bike.id}, 'accidentCount', this.value); renderBikes()" 
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-700">
+                                    <option value="0回" ${bike.accidentCount === '0回' ? 'selected' : ''}>0回</option>
+                                    <option value="1回" ${bike.accidentCount === '1回' ? 'selected' : ''}>1回</option>
+                                    <option value="2回" ${bike.accidentCount === '2回' ? 'selected' : ''}>2回</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        ${bike.accidentCount !== '0回' ? `
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">事故種類</label>
+                                    <select onchange="updateBike(${bike.id}, 'accidentType', this.value)" 
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-700">
+                                        <option value="">選択してください</option>
+                                        ${accidentTypes.map(a => `<option value="${a}" ${bike.accidentType === a ? 'selected' : ''}>${a}</option>`).join('')}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">適用期間</label>
+                                    <select onchange="updateBike(${bike.id}, 'accidentCoefficientYear', this.value)" 
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-700">
+                                        <option value="">選択してください</option>
+                                        ${Array.from({ length: 7 }, (_, i) => `${i}年`).map(y => `<option value="${y}" ${bike.accidentCoefficientYear === y ? 'selected' : ''}>${y}</option>`).join('')}
+                                    </select>
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+                
+                container.appendChild(bikeSection);
+            });
+        }
+
+        function updateBike(bikeId, field, value) {
+            const bike = state.bikes.find(b => b.id === bikeId);
+            if (bike) {
+                if (typeof value === 'object') {
+                    bike[field] = { ...bike[field], ...value };
+                } else {
+                    bike[field] = value;
+                }
+            }
+        }
+
+        function startOCR(bikeId, method) {
+            const bike = state.bikes.find(b => b.id === bikeId);
+            if (bike) {
+                bike.ocrLoading = true;
+                renderBikes();
+                setTimeout(() => {
+                    bike.maker = 'ホンダ';
+                    bike.type = '軽二輪 (125cc超〜250cc以下)';
+                    bike.ocrLoading = false;
+                    renderBikes();
+                }, 3000);
+            }
+        }
+
+        function selectBikeColor(bikeId, color, btn) {
+            // ボタンの選択状態を更新
+            const parent = btn.parentElement;
+            const siblings = parent.querySelectorAll('.color-button');
+            siblings.forEach(sibling => sibling.classList.remove('selected', 'border-blue-700', 'bg-blue-50'));
+            btn.classList.add('selected', 'border-blue-700', 'bg-blue-50');
+            
+            // バイクカードの背景色を更新
+            const bikeCard = document.getElementById(`bikeCard-${bikeId}`);
+            bikeCard.classList.remove('bg-red', 'bg-blue', 'bg-black');
+            bikeCard.classList.add(`bg-${color}`);
+            
+            // カラーマップの逆引き
+            const colorNameMap = {
+                'red': '赤',
+                'blue': '青',
+                'black': '黒'
+            };
+            
+            // データを保存
+            updateBike(bikeId, 'color', colorNameMap[color]);
+        }
+
+        function showConfirmModal() {
+            const summary = state.bikes.map((bike, idx) => 
+                `バイク ${idx + 1}: ${bike.name || '未入力'} (${bike.color || '未選択'}) - ${bike.maker || '未選択'} ${bike.type || '未選択'}`
+            ).join('\n');
+
+            const allData = `=== 登録情報サマリー ===
+保険加入状況: 他社で加入中
+保険開始日: ${state.startDate.year}年 ${state.startDate.month} ${state.startDate.day}日
+
+契約者情報:
+- バイク所有者: ${state.bikeOwner}
+- 生年月日: ${state.birthday.year}年 ${state.birthday.month} ${state.birthday.day}日
+- 免許証の色: ${state.licenseColor}
+- 使用目的: ${state.bikeUse}
+- 主な使用地: ${state.prefecture}
+
+バイク情報:
+${state.bikes.map((bike, idx) => `
+バイク ${idx + 1}:
+  名前: ${bike.name}
+  色: ${bike.color}
+  入力方法: ${bike.inputMethod === 'manual' ? '手入力' : 'AI-OCR'}
+  メーカー: ${bike.maker}
+  タイプ: ${bike.type}
+  年間走行距離: ${bike.annualDistance}
+  現在の保険会社: ${bike.carrier}
+  契約期間: ${bike.contractPeriod === '1year' ? '1年契約' : 'その他'}
+  ${bike.contractPeriod === '1year' ? `終了日: ${bike.endDate.year}年 ${bike.endDate.month} ${bike.endDate.day}日` : `開始日: ${bike.startDate.year}年 ${bike.startDate.month} ${bike.startDate.day}日\n  終了日: ${bike.endDate.year}年 ${bike.endDate.month} ${bike.endDate.day}日`}
+  ノンフリート等級: ${bike.grade}
+  事故回数: ${bike.accidentCount}
+  ${bike.accidentCount !== '0回' ? `事故種類: ${bike.accidentType}\n  適用期間: ${bike.accidentCoefficientYear}` : ''}
+`).join('')}`;
+
+            document.getElementById('confirmContent').textContent = allData;
+            document.getElementById('confirmModal').classList.remove('hidden');
+        }
+
+        function submitForm() {
+            alert('見積結果へ進みます！');
+            document.getElementById('confirmModal').classList.add('hidden');
+        }
+
+        // Start the app
+        init();
+    </script>
+</body>
+</html>
