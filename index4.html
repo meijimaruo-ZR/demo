@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>バイク保険 - 加入フロー</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .card-button {
+            transition: all 0.2s ease;
+        }
+        .card-button:hover {
+            transform: translateY(-2px);
+        }
+        .card-button.selected {
+            border-color: rgb(30, 90, 189);
+            background-color: rgb(219, 234, 254);
+        }
+        
+        .step-section {
+            opacity: 0;
+            max-height: 0;
+            overflow: hidden;
+            transition: opacity 0.4s ease, max-height 0.4s ease;
+            pointer-events: none;
+        }
+        
+        .step-section.visible {
+            opacity: 1;
+            max-height: 2000px;
+            pointer-events: auto;
+        }
+        
+        .bike-card {
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .loading-bar {
+            animation: progress 3s ease-in-out;
+        }
+        
+        @keyframes progress {
+            0% { width: 0%; }
+            50% { width: 70%; }
+            100% { width: 100%; }
+        }
+        
+        .bike-card.bg-red {
+            background-color: rgb(254, 242, 242);
+        }
+        
+        .bike-card.bg-blue {
+            background-color: rgb(240, 249, 255);
+        }
+        
+        .bike-card.bg-black {
+            background-color: rgb(249, 250, 251);
+        }
+
+        /* MyPage Login Screen Styles */
+        .mypage-container {
+            display: none;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .mypage-container.visible {
+            display: flex;
+        }
+
+        .passkey-card {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            max-width: 500px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .auth-icon {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .auth-icon svg {
+            width: 48px;
+            height: 48px;
+            color: #1e5abd;
+        }
+
+        .auth-icon-label {
+            font-size: 14px;
+            color: #666;
+            text-align: center;
+        }
+
+        .icon-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        /* Registration Form Container */
+        .registration-container {
+            display: block;
+        }
+
+        .registration-container.hidden {
+            display: none;
+        }
+    </style>
+    <script>
+        // ページ全体を非表示にする
+        document.documentElement.style.display = 'none';
+        
+        // 認証チェック関数
+        function checkAuthentication() {
+            const authenticated = sessionStorage.getItem('authenticated');
+            
+            // 既に認証済みならページを表示
+            if (authenticated === 'true') {
+                document.documentElement.style.display = '';
+                return;
+            }
+            
+            // パスワード入力ループ
+            let isValid = false;
+            let attempts = 0;
+            const maxAttempts = 3;
+            
+            while (!isValid && attempts < maxAttempts) {
+                const password = prompt(
+                    attempts === 0 
+                        ? 'このページを表示するにはパスワードが必要です。\n\nパスワードを入力してください：'
+                        : `パスワードが間違っています。\n\nもう一度入力してください（残り${maxAttempts - attempts}回）：`
+                );
+                
+                // キャンセルボタンの場合
+                if (password === null) {
+                    showAccessDenied('キャンセルしました');
+                    return;
+                }
+                
+                // 空の場合
+                if (password === '') {
+                    attempts++;
+                    continue;
+                }
+                
+                // パスワード確認
+                if (password === 'insurance2026') {
+                    isValid = true;
+                    sessionStorage.setItem('authenticated', 'true');
+                    document.documentElement.style.display = '';
+                } else {
+                    attempts++;
+                }
+            }
+            
+            // 試行回数超過
+            if (!isValid) {
+                showAccessDenied('試行回数が超過しました');
+            }
+        }
+        
+        // アクセス拒否画面を表示
+        function showAccessDenied(reason) {
+            document.documentElement.style.display = '';
+            document.body.innerHTML = `
+                <div style="display: flex; align-items: center; justify-content: center; min-height: 100vh; background-color: #f3f4f6;">
+                    <div style="text-align: center; padding: 40px; background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
+                        <h1 style="color: #dc2626; font-size: 24px; margin-bottom: 16px;">🔒 アクセス拒否</h1>
+                        <p style="color: #666; font-size: 16px; margin-bottom: 24px;">申し訳ありませんが、このページへのアクセスは制限されています。</p>
+                        <p style="color: #999; font-size: 14px;">理由: ${reason}</p>
+                        <button onclick="location.reload()" style="margin-top: 24px; padding: 12px 24px; background-color: #1e5abd; color: white; border: none; border-radius: 6px; font-size: 16px; cursor: pointer; transition: background-color 0.2s;">
+                            もう一度試す
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // DOMContentLoaded 後に認証チェック実行
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', checkAuthentication);
+        } else {
+            checkAuthentication();
+        }
+    </script>
+</head>
+<body class="bg-gray-50">
+    <!-- Registration Container -->
+    <div class="registration-container" id="registrationContainer">
+        <div class="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
+            <div class="max-w-4xl mx-auto">
+                <div class="mb-4">
+                    <h1 class="text-3xl font-bold text-blue-700 mb-1">バイク保険</h1>
+                    <p class="text-gray-600">加入手続き(追加加入する編)</p>
+                </div>
+
+                <div id="messageArea" class="mb-6"></div>
+
+                <form id="quoteForm" class="space-y-8">
+                    <!-- Step 1: Insurance Status -->
+                    <div id="step1" class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                        <label class="flex items-center mb-6">
+                            <svg class="w-5 h-5 text-blue-700 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M2 10.5a1.5 1.5 0 113 0v6a1.5 1.5 0 01-3 0v-6zM6 10.333v5.43a2 2 0 001.106 1.79l.05.025A4 4 0 008.943 18h5.416a2 2 0 001.962-1.608l1.2-6A2 2 0 0015.56 8H12V4a2 2 0 00-2-2 1 1 0 00-1 1v.667a4 4 0 01-.8 2.4L6.8 9.2a2 2 0 00-.8 1.133z"></path>
+                            </svg>
+                            <span class="text-lg font-bold text-gray-900">【保険加入状況】</span>
+                        </label>
+                        <div class="grid grid-cols-1 gap-4">
+                            <button type="button" class="card-button border border-gray-300 rounded-lg py-5 px-4 text-center hover:border-blue-700" onclick="handleInsuranceStatus('other-switching', this)">
+                                <div class="text-lg font-bold text-gray-900">他社で加入中</div>
+                            </button>
+                            <button type="button" class="card-button border border-gray-300 rounded-lg py-5 px-4 text-center hover:border-blue-700" onclick="handleInsuranceStatus('additional', this)">
+                                <div class="text-lg font-bold text-gray-900">追加加入する</div>
+                            </button>
+                            <button type="button" class="card-button border border-gray-300 rounded-lg py-5 px-4 text-center hover:border-blue-700" onclick="handleInsuranceStatus('first-time', this)">
+                                <div class="text-lg font-bold text-gray-900">はじめて加入する</div>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- MyPage Transition Container (Newly added for "additional" choice) -->
+                    <div id="mypageTransitionContainer" class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hidden">
+                        <label class="flex items-center mb-6">
+                            <svg class="w-5 h-5 text-blue-700 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
+                            </svg>
+                            <span class="text-lg font-bold text-gray-900">【マイページへの遷移】</span>
+                        </label>
+                        <div class="flex gap-4">
+                            <button type="button" class="flex-1 px-6 py-4 bg-blue-700 hover:bg-blue-800 text-white font-bold rounded-lg transition-colors text-center" onclick="transitionToMyPageLogin()">
+                                進む
+                            </button>
+                            <button type="button" class="flex-1 px-6 py-4 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded-lg transition-colors text-center" onclick="handleCancel()">
+                                キャンセル
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="bikeCardsContainer"></div>
+
+                    <div id="submitContainer" class="bg-white rounded-lg p-6 shadow-sm border border-gray-200 hidden">
+                        <button type="button" id="submitBtn" class="w-full px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-lg transition-colors" onclick="submitForm()">
+                            見積もり結果を確認する
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- MyPage Login Container -->
+    <div class="mypage-container" id="mypageContainer">
+        <div class="flex items-center justify-center w-full">
+            <div class="passkey-card">
+                <h2 class="text-2xl font-bold text-gray-900 mb-2">マイページ ログイン</h2>
+                <p class="text-gray-600 mb-8">パスキー認証でログイン</p>
+
+                <div class="icon-grid">
+                    <div class="auth-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="8" r="3"></circle>
+                            <path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662"></path>
+                        </svg>
+                        <span class="auth-icon-label">顔認証</span>
+                    </div>
+                    <div class="auth-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M7 2C4.239 2 2 4.239 2 7v10c0 2.761 2.239 5 5 5h10c2.761 0 5-2.239 5-5V7c0-2.761-2.239-5-5-5H7z"></path>
+                            <circle cx="12" cy="12" r="2"></circle>
+                        </svg>
+                        <span class="auth-icon-label">指紋認証</span>
+                    </div>
+                    <div class="auth-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="6" cy="6" r="1.5"></circle>
+                            <circle cx="12" cy="6" r="1.5"></circle>
+                            <circle cx="18" cy="6" r="1.5"></circle>
+                            <circle cx="6" cy="12" r="1.5"></circle>
+                            <circle cx="12" cy="12" r="1.5"></circle>
+                            <circle cx="18" cy="12" r="1.5"></circle>
+                            <circle cx="6" cy="18" r="1.5"></circle>
+                            <circle cx="12" cy="18" r="1.5"></circle>
+                            <circle cx="18" cy="18" r="1.5"></circle>
+                        </svg>
+                        <span class="auth-icon-label">PIN</span>
+                    </div>
+                    <div class="auth-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="7" cy="7" r="1.5"></circle>
+                            <circle cx="17" cy="7" r="1.5"></circle>
+                            <circle cx="7" cy="17" r="1.5"></circle>
+                            <circle cx="17" cy="17" r="1.5"></circle>
+                            <path d="M7 7L17 17M17 7L7 17"></path>
+                        </svg>
+                        <span class="auth-icon-label">パターン</span>
+                    </div>
+                </div>
+
+                <button type="button" class="w-full px-6 py-3 bg-blue-700 hover:bg-blue-800 text-white font-semibold rounded-lg transition-colors mt-8" onclick="handlePasskeyLogin()">
+                    パスキー認証でログイン
+                </button>
+
+                <p class="text-center mt-6">
+                    <a href="#" class="text-blue-700 hover:text-blue-800 text-sm font-medium">パスキー認証について ></a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let formState = {
+            insuranceStatus: null,
+            startDate: {},
+            bikeOwner: null,
+            bikeUse: null,
+            prefecture: null,
+            bikeCount: null,
+            bikes: {}
+        };
+
+        function showMessage(message, type = 'info') {
+            const messageArea = document.getElementById('messageArea');
+            if (message === '') {
+                messageArea.innerHTML = '';
+                return;
+            }
+            const bgColor = type === 'info' ? 'bg-blue-50' : 'bg-green-100';
+            const textColor = type === 'info' ? 'text-blue-700' : 'text-green-800';
+            messageArea.innerHTML = `<div class="p-4 rounded-lg ${bgColor} ${textColor} text-center font-medium text-base shadow-sm border border-blue-100">${message}</div>`;
+        }
+
+        function handleInsuranceStatus(status, btn) {
+            formState.insuranceStatus = status;
+            
+            const parent = btn.parentElement;
+            const siblings = parent.querySelectorAll('.card-button');
+            siblings.forEach(sibling => sibling.classList.remove('selected'));
+            btn.classList.add('selected');
+            
+            // マイページ遷移用の枠オブジェクト
+            const mypageTransitionContainer = document.getElementById('mypageTransitionContainer');
+            
+            if (status === 'other-switching') {
+                mypageTransitionContainer.classList.add('hidden');
+                showMessage('他社乗り換えフローへ遷移します（このモックアップではこれで終了です）');
+                showStep(2);
+            } else if (status === 'additional') {
+                showMessage(''); // メッセージエリアをクリア
+                hideSubsequentSteps();
+                // 新しい枠（マイページへの遷移）を表示
+                mypageTransitionContainer.classList.remove('hidden');
+            } else if (status === 'first-time') {
+                mypageTransitionContainer.classList.add('hidden');
+                showMessage('新規加入フローへ遷移します（このモックアップではこれで終了です）');
+                hideSubsequentSteps();
+            }
+        }
+
+        function handleCancel() {
+            // マイページへの遷移枠を非表示にする
+            document.getElementById('mypageTransitionContainer').classList.add('hidden');
+            
+            // フォーム状態の選択肢をクリア
+            formState.insuranceStatus = null;
+            
+            // 「追加加入する」ボタンの選択表示（selectedクラス）を外す
+            const cardButtons = document.querySelectorAll('.card-button');
+            cardButtons.forEach(btn => btn.classList.remove('selected'));
+        }
+
+        function showStep(stepNumber) {
+            if (stepNumber > 1) {
+                for (let i = 2; i <= stepNumber; i++) {
+                    const step = document.getElementById(`step${i}`);
+                    if (step) step.classList.add('visible');
+                }
+            }
+        }
+
+        function hideSubsequentSteps() {
+            const steps = document.querySelectorAll('.step-section');
+            steps.forEach(step => step.classList.remove('visible'));
+            document.getElementById('bikeCardsContainer').innerHTML = '';
+            document.getElementById('submitContainer').classList.add('hidden');
+        }
+
+        function selectOption(btn, optionType) {
+            const parent = btn.parentElement;
+            const siblings = parent.querySelectorAll('.card-button');
+            siblings.forEach(sibling => sibling.classList.remove('selected'));
+            btn.classList.add('selected');
+            
+            if (optionType === 'bike-owner') {
+                formState.bikeOwner = btn.textContent.trim();
+                showStep(4);
+            } else if (optionType === 'bike-use') {
+                formState.bikeUse = btn.textContent.trim();
+                showStep(5);
+            }
+        }
+
+        function checkStep2Complete() {
+            const year = document.getElementById('startYear').value;
+            const month = document.getElementById('startMonth').value;
+            const day = document.getElementById('startDay').value;
+            
+            if (year !== '選択してください' && month !== '選択してください' && day !== '選択してください') {
+                formState.startDate = { year, month, day };
+                showStep(3);
+            }
+        }
+
+        function checkStep5Complete() {
+            const prefecture = document.getElementById('prefecture').value;
+            if (prefecture !== '選択してください') {
+                formState.prefecture = prefecture;
+                showStep(6);
+            }
+        }
+
+        function generateBikeCards() {
+            const count = document.getElementById('bikeCount').value;
+            if (count !== '選択してください') {
+                formState.bikeCount = parseInt(count);
+                const container = document.getElementById('bikeCardsContainer');
+                container.innerHTML = '';
+                
+                for (let i = 1; i <= count; i++) {
+                    const card = document.createElement('div');
+                    card.className = 'bike-card bg-white rounded-lg p-6 shadow-sm border border-gray-200';
+                    card.innerHTML = `
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">バイク ${i}</h3>
+                        <div class="grid grid-cols-2 gap-4">
+                            <input type="text" placeholder="メーカー名" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-700">
+                            <input type="text" placeholder="車種" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-700">
+                            <input type="text" placeholder="型式" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-700">
+                            <input type="text" placeholder="年式" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-700">
+                        </div>
+                    `;
+                    container.appendChild(card);
+                }
+                
+                // Show submit button
+                document.getElementById('submitContainer').classList.remove('hidden');
+            }
+        }
+
+        function transitionToMyPageLogin() {
+            document.getElementById('registrationContainer').classList.add('hidden');
+            document.getElementById('mypageContainer').classList.add('visible');
+        }
+
+        function handlePasskeyLogin() {
+            alert('マイページへログインしました（モック表示）');
+            // Reset and return to registration form
+            document.getElementById('mypageContainer').classList.remove('visible');
+            document.getElementById('registrationContainer').classList.remove('hidden');
+            formState = {
+                insuranceStatus: null,
+                startDate: {},
+                bikeOwner: null,
+                bikeUse: null,
+                prefecture: null,
+                bikeCount: null,
+                bikes: {}
+            };
+            // Reset form
+            document.getElementById('quoteForm').reset();
+            const cardButtons = document.querySelectorAll('.card-button');
+            cardButtons.forEach(btn => btn.classList.remove('selected'));
+            hideSubsequentSteps();
+            document.getElementById('mypageTransitionContainer').classList.add('hidden'); // マイページ遷移枠も非表示に戻す
+            showMessage('');
+        }
+
+        function submitForm() {
+            alert('見積もり結果表示（モック表示）');
+        }
+    </script>
+</body>
+</html>
